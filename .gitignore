@@ -1,0 +1,8 @@
+# Saved data
+*.dat
+# Saved figures
+*.pdf
+# Pycache
+__pycache__
+# Swap files
+*.swp
