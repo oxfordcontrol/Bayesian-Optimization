@@ -79,7 +79,7 @@ def run_experiments():
     # This prevents libraries from using all available threads
     os.environ["OMP_NUM_THREADS"] = "1"
 
-    num_threads = 50
+    num_threads = 3
     experiments, seeds = define_experiments()
 
     for i in range(0, len(experiments)):
