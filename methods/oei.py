@@ -14,7 +14,7 @@ class OEI(BO):
     N Rontsis, MA Osborne, PJ Goulart
     Distributionally Robust Optimization Techniques in Batch Bayesian
     Optimization
-    arxiv_link
+    https://arxiv.org/abs/1707.04191
     '''
     def __init__(self, options):
         super(OEI, self).__init__(options)
