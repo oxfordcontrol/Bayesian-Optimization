@@ -12,6 +12,20 @@
   return(grad)
 }
 
+`qEI_timing` <- function(x, x_all, y_all, covtype, cov_param, cov_var, var){
+  m <- create_model(x_all, y_all, covtype, cov_param, cov_var, var)
+  # Query ei first to avoid potential initialization timings
+  ei = qEI(x, m, type="SK")
+
+  timing <- system.time({
+    ei = qEI(x, m, type="SK")
+    grad = qEI.grad(x, m, type="SK")
+  })
+
+  # Return elapsed time
+  return(timing[3])
+}
+
 `model_mean` <- function(x, x_all, y_all, covtype, cov_param, cov_var, var){
   m <- create_model(x_all, y_all, covtype, cov_param, cov_var, var)
 

@@ -3,6 +3,9 @@ import GPy
 import numpy as np
 import scipy as sp
 import cvxpy as cvx
+import scs
+import collections
+import time
 
 
 class OEI(BO):
@@ -19,31 +22,46 @@ class OEI(BO):
     def __init__(self, options):
         super(OEI, self).__init__(options)
 
-    @classmethod
-    def acquisition_fun(cls, X, m):
+        if 'solver' in options:
+            self.solver = options['solver']
+        else:
+            self.solver = 'MOSEK'
+
+        self.Omega_list = collections.deque(maxlen=10)
+        self.x_list = collections.deque(maxlen=10)
+        self.y_list = collections.deque(maxlen=10)
+        self.s_list = collections.deque(maxlen=10)
+
+    def acquisition_fun(self, X, m):
         # The acquisition function is simply the solution of an SDP
         eta = min(m.Y)
-        (opt_val, M) = cls.sdp(cls.Omega_(X, m), eta)
+
+        if self.solver == 'SCS':
+            (opt_val, M) = self.sdp_scs(self.Omega_(X, m), eta)
+        elif self.solver == 'MOSEK':
+            (opt_val, M) = self.sdp_mosek(self.Omega_(X, m), eta)
 
         # The derivative of the acquisition function p is calculated
         # by providing dp/dK(X,X0) and dp/dK(X,X) to the GPy function
         # m.kern.gradients_X, which performs the chain rule to get
         # dp/dX.
         dpdX = \
-            m.kern.gradients_X(cls.dpdK0(m, X, M), X, m.X) \
-            + m.kern.gradients_X(cls.dpdK(m, X, M), X)
+            m.kern.gradients_X(self.dpdK0(m, X, M), X, m.X) \
+            + m.kern.gradients_X(self.dpdK(m, X, M), X)
 
         return opt_val, dpdX
 
-    @classmethod
-    def acquisition_fun_flat(cls, X, m):
+    def acquisition_fun_flat(self, X, m):
         '''
         Wrapper for acquisition_fun, where X is considered as a vector
         '''
+        start = time.time()
         n = m.X.shape[1]
         k = X.shape[0]//n
 
-        (opt_val, dpdX) = cls.acquisition_fun(X.reshape(k, n), m)
+        (opt_val, dpdX) = self.acquisition_fun(X.reshape(k, n), m)
+        end = time.time()
+        self.timings.append(end - start)
         return opt_val, dpdX.flatten()
 
     def acq_fun_optimizer(self, m):
@@ -89,9 +107,10 @@ class OEI(BO):
         return X
 
     @staticmethod
-    def sdp(Omega, eta):
+    def sdp_mosek(Omega, eta):
         '''
-        Solves the SDP, the solution of which is the acquisiton function.
+        Solves the SDP, with the second order solver MOSEK, via CVXPY,
+        the solution of which is the acquisiton function.
         Inputs:
             Omega: Second order moment matrix
             eta: min value achieved so far, i.e. min(y0)
@@ -137,6 +156,119 @@ class OEI(BO):
         M = np.asarray((M + M.T)/2)  # From matrix to array
 
         return opt_val, M
+
+    def sdp_scs(self, Omega, eta):
+        '''
+        Solves the SDP, with the first order solver SCS,
+        the solution of which is the acquisiton function.
+        Inputs:
+            Omega: Second order moment matrix
+            eta: min value achieved so far, i.e. min(y0)
+        Outpus:
+            opt_val: Optimal value of the SDP
+            M: Optimizer of the SDP
+
+        The dual formulation is used, as this appears to be faster:
+
+        minimize \sum_{i=0}^{k} <Y_i, C_i> - eta
+        s.t.     Y_i positive semidefinite for all i = 0...k
+                 \sum_{i=0}^{k} Y_i = \Omega
+        '''
+        k = Omega.shape[0]
+
+        # Calculation of b
+        b = np.array([])
+
+        C_i = np.zeros((k, k))
+        C_i[-1, -1] = eta
+
+        b = np.append(b, self.pack(C_i, k))
+
+        for i in range(1, k):
+            C_i = np.zeros((k, k))
+            C_i[-1, i - 1] = 1/2
+            C_i[i - 1, -1] = 1/2
+
+            b = np.append(b, self.pack(C_i, k))
+
+        # Calculation of c
+        c = -self.pack(Omega, k)
+
+        # Calculation of A
+        n = k * (k + 1) // 2
+        A = np.zeros((k*n, n))
+        row_ind = np.array([])
+        col_ind = np.array([])
+        y = np.array([])
+        for i in range(n):
+            row_ind = np.append(row_ind, np.arange(i, k*n, n))
+            col_ind = np.append(col_ind, np.repeat(i, k))
+            y = np.append(y, np.repeat(1, k))
+        A = sp.sparse.csc_matrix((y, (row_ind, col_ind)), shape=(k*n, n))
+
+        # Gather data
+        if len(self.Omega_list) == 0:
+            data = {'A': A, 'b': b, 'c': c}
+        else:
+            # Find nearest neighbour
+            def sort_func(X):
+                return np.linalg.norm(X - Omega)
+            Omega_min = min(self.Omega_list, key=sort_func)
+            idx = -1
+            for i in range(len(self.Omega_list)):
+                if np.array_equal(Omega_min, self.Omega_list[i]):
+                    idx = i
+            assert idx != -1
+
+            data = {'A': A, 'b': b, 'c': c,
+                    'x': self.x_list[idx], 'y': self.y_list[idx],
+                    's': self.s_list[idx]}  # Warm start
+        cone = {'s': [k]*k}
+
+        # sol = scs.solve(data, cone, use_indirect=True, eps=1e-4,
+        #                 max_iters=10000, verbose=False)
+        sol = scs.solve(data, cone, use_indirect=True, verbose=False)
+
+        if sol['info']['status'] != 'Solved':
+            print('Solver: solution status ', sol['info']['status'])
+
+        # Save solution for warm starting
+        self.Omega_list.append(Omega)
+        self.x_list.append(sol['x'])
+        self.y_list.append(sol['y'])
+        self.s_list.append(sol['s'])
+
+        opt_val = -(sol['info']['pobj'] + sol['info']['dobj'])/2 - eta
+        M = self.unpack(sol['x'], k)
+
+        return opt_val, M
+
+    @staticmethod
+    def pack(Z, n):
+        Z = np.copy(Z)
+        tidx = np.triu_indices(n)
+        tidx = (tidx[1], tidx[0])
+        didx = np.diag_indices(n)
+
+        Z = Z * np.sqrt(2.)
+        Z[didx] = Z[didx] / np.sqrt(2.)
+        z = Z[tidx]
+
+        return z
+
+    @staticmethod
+    def unpack(z, n):
+        z = np.copy(z)
+        tidx = np.triu_indices(n)
+        tidx = (tidx[1], tidx[0])
+        didx = np.diag_indices(n)
+
+        Z = np.zeros((n, n))
+        Z[tidx] = z
+        Z = (Z + np.transpose(Z)) / np.sqrt(2.)
+        Z[didx] = Z[didx] / np.sqrt(2.)
+
+        return Z
 
     @staticmethod
     def Omega_(X, m):

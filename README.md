@@ -30,5 +30,12 @@ python plot_experiments.py results/sixhumpcamel_oEI*.dat results/sixhumpcamel_qE
 python plot_experiments.py results/alpine1_oEI*.dat results/alpine1_qEI*.dat results/alpine1_BLCB*.dat
 ```
 
+## Timing results
+To compare the timing of OEI as compared to QEI run 
+```
+python timings.py
+```
+This compares the average time computing time for OEI and QEI (and their gradients) when performing Bayesian Optimization on a standard 5d optimization function (alpine1).
+
 ## Multipoint Expected Improvement Accuracy
 The `R` script `methods/qEI_problem.R` demonstrates cases where the accuracy of `qEI` is arbitrarily wrong (remark of last paragraph of section 3 of the [paper](https://arxiv.org/abs/1707.04191)).

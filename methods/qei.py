@@ -6,6 +6,8 @@ import rpy2.robjects as robjects        # This initializes R
 from rpy2.robjects.packages import importr
 from rpy2.robjects import numpy2ri
 import os
+import time
+import pdb
 
 
 class QEI(BO):
@@ -38,8 +40,7 @@ class QEI(BO):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         robjects.r("source('" + dir_path + "/r_callers.R')")
 
-    @classmethod
-    def acquisition_fun(cls, X, m):
+    def acquisition_fun(self, X, m):
         # Pack the parameters of the model in the format
         # required by DiceKriging
         if m.kern.ARD:
@@ -61,6 +62,11 @@ class QEI(BO):
                                        cov_var, var)
         grad = robjects.r['qEI_grad_caller'](X, m.X, m.Y, cov_type,
                                              cov_param, cov_var, var)
+        if self.timing:
+            r_time = robjects.r['qEI_timing'](X, m.X, m.Y, cov_type,
+                                              cov_param, cov_var, var)[0]
+            self.timings.append(r_time)
+
         opt_val = -np.asarray(qEI)
         dpdX = -np.array(grad)
 
@@ -99,15 +105,17 @@ class QEI(BO):
 
         return opt_val, dpdX
 
-    @classmethod
-    def acquisition_fun_flat(cls, X, m):
+    def acquisition_fun_flat(self, X, m):
         '''
         Wrapper for acquisition_fun, where X is considered as a vector
         '''
+        start = time.time()
         n = m.X.shape[1]
         k = X.shape[0]//n
 
-        (opt_val, dpdX) = cls.acquisition_fun(X.reshape(k, n), m)
+        (opt_val, dpdX) = self.acquisition_fun(X.reshape(k, n), m)
+        end = time.time()
+        self.timings.append(end - start)
         return opt_val, dpdX.flatten()
 
     def acq_fun_optimizer(self, m):

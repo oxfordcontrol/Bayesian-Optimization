@@ -14,7 +14,8 @@ class Caller():
     and keeps the results for analysis. It includes methods for plotting,
     saving/loading data.
     '''
-    def __init__(self, job_name=None, bo=None, filename=None):
+    def __init__(self, job_name=None, bo_class=None,
+                 options=None, filename=None):
         '''
         The user can provide either an object of type BO or
         the options dictionary used to create the BO object.
@@ -22,11 +23,12 @@ class Caller():
         The second case is only used to plot saved experiments.
         The user cannot provide both, as the BO object has its own options.
         '''
-        assert (job_name is None and bo is None) or filename is None, \
+        assert (job_name is None and bo_class is None and options is None) \
+            or filename is None, \
             'You cannot provide both a BO object and a filename to load from'
         if filename is None:
-            self.bo = bo
-
+            self.bo_class = bo_class
+            self.options = options.copy()
             self.job_name = job_name
 
             self.seeds = []   # List with the seeds that led to successful runs
@@ -43,7 +45,7 @@ class Caller():
         '''
         Runs a single Bayesian Optimization loop. Basically the function
         is a fancy wrapper to the following call:
-            self.bo.bayesian_optimization(X0, y0, objective)
+            bo.bayesian_optimization(X0, y0, objective)
 
         Inputs:
             seed: Random seed for the Experiment
@@ -57,27 +59,29 @@ class Caller():
                              outputs of the BO loop
             models: List of the GP models at each iteration of the BO loop
         '''
+        bo = self.bo_class(self.options)
+
         points = None
         outputs = None
         models = None
 
         # Copy the objective. This is essential when testing draws from GPs
-        objective = copy.copy(self.bo.objective)
+        objective = copy.copy(bo.objective)
 
         np.random.seed(seed)
 
         if X0 is None:
-            X0 = BO.random_sample(self.bo.bounds, self.bo.initial_size)
+            X0 = BO.random_sample(bo.bounds, bo.initial_size)
             y0 = objective.f(X0)
         else:
             assert y0 is not None
-            assert X0.shape[0] == y0.shape[0] == self.bo.initial_size
+            assert X0.shape[0] == y0.shape[0] == bo.initial_size
 
         failed = False
         if robust:
             try:
                 points, outputs, models = \
-                    self.bo.bayesian_optimization(X0, y0, objective)
+                    bo.bayesian_optimization(X0, y0, objective)
                 print('Done with seed:', seed)
             except:
                 failed = True
@@ -85,7 +89,7 @@ class Caller():
                       'with seed', seed, 'failed')
         else:
             points, outputs, models = \
-                self.bo.bayesian_optimization(X0, y0, objective)
+                bo.bayesian_optimization(X0, y0, objective)
             print('Done with seed:', seed)
 
         if save:
@@ -154,12 +158,14 @@ class Caller():
             label = self.job_name + '_' + sha
 
         n = len(self.seeds)  # Number of successful experiments
-        k = self.bo.iterations  # Number of iterations
+        k = self.options['iterations']  # Number of iterations
         mins = np.zeros((n, k + 1))
         for i in range(n):
             for j in range(k + 1):
-                idx = np.argmin(self.outputs[i][0:self.bo.initial_size +
-                                                j*self.bo.batch_size, 0])
+                idx = np.argmin(
+                    self.outputs[i][0:self.options['initial_size'] +
+                                    j*self.options['batch_size'], 0]
+                )
                 mins[i, j] = self.outputs[i][idx, output_idx]
 
         fig, ax = self.plot_mins(mins, color, fig, ax, label, offset)
@@ -176,26 +182,28 @@ class Caller():
 
         all_seeds = self.seeds + self.failed_seeds
         n = len(all_seeds)  # Num of ALL experiments
-        k = self.bo.iterations  # Number of iterations
+        k = self.options['iterations']  # Number of iterations
         mins = np.zeros((n, k + 1))
         for i in range(n):
-            objective = copy.copy(self.bo.objective)
+            objective = copy.copy(self.options['objective'])
             np.random.seed(int(all_seeds[i]))
             # We generate X in two steps so as the first initial_size points
             # are the same as the ones in the real experiments, as dictated by
             # the seed. This is important when testing draws of a Gaussian
             # Process.
-            X0 = BO.random_sample(self.bo.bounds, self.bo.initial_size)
+            X0 = BO.random_sample(self.options['bounds'],
+                                  self.options['initial_size'])
             Y0 = objective.f(X0)
 
-            X = BO.random_sample(self.bo.bounds, k*self.bo.batch_size)
+            X = BO.random_sample(self.options['bounds'],
+                                 k*self.options['batch_size'])
             Y = objective.f(X)
 
             X = np.concatenate((X0, X))
             Y = np.concatenate((Y0, Y))
             for j in range(k + 1):
-                idx = np.argmin(Y[0:self.bo.initial_size +
-                                j*self.bo.batch_size, 0])
+                idx = np.argmin(Y[0:self.options['initial_size'] +
+                                j*self.options['batch_size'], 0])
                 mins[i, j] = Y[idx, output_idx]
 
         fig, ax = self.plot_mins(mins, color, fig, ax, label, offset)
@@ -209,8 +217,9 @@ class Caller():
             fig = plt.figure()
             ax = fig.add_subplot(111)
 
-        ax.errorbar(np.arange(0, self.bo.iterations + 1) + offset,
-                    np.mean(mins, axis=0), yerr=np.std(mins, axis=0),
+        ax.errorbar(x=np.arange(0, self.options['iterations'] + 1) + offset,
+                    y=np.mean(mins, axis=0),
+                    yerr=np.std(mins, axis=0),
                     capsize=0, color=color, label=label, fmt='.')
         ax.legend()
 
@@ -234,7 +243,8 @@ class Caller():
         Recreates the GP model of the given starting seed and
         iteration of the BO loop.
         '''
-        idx = self.bo.initial_size + iteration*self.bo.batch_size
+        bo = self.bo_class(self.options)
+        idx = bo.initial_size + iteration*bo.batch_size
         X = self.points[seed_idx][0:idx]
         Y = self.outputs[seed_idx][0:idx]
         m_params = self.models[seed_idx][iteration]
@@ -242,8 +252,8 @@ class Caller():
         # Copied from https://github.com/SheffieldML/GPy/README.md
         # Provide only the first column of Y.
         # The others columns contain auxiliary data.
-        m_load = GPy.models.GPRegression(X, self.bo.normalize(Y[:, 0:1]),
-                                         self.bo.kernel.copy(),
+        m_load = GPy.models.GPRegression(X, bo.normalize(Y[:, 0:1]),
+                                         bo.kernel.copy(),
                                          initialize=False)
         # do not call the underlying expensive algebra on load
         m_load.update_model(False)
@@ -278,7 +288,7 @@ class Caller():
         with open(filename, 'rb') as f:
             (options, self.job_name, self.seeds, self.failed_seeds,
                 self.points, self.outputs, self.models) = pickle.load(f)
-            self.bo = BO(options)
+            self.bo_class = BO
 
     def save_data(self, filename=None):
         '''
@@ -286,7 +296,7 @@ class Caller():
         Warning: pickle is used, so the saving/loading might be inconsistent
         across different versions
         '''
-        data = (self.bo.options, self.job_name,
+        data = (self.options, self.job_name,
                 self.seeds, self.failed_seeds,
                 self.points, self.outputs, self.models)
 

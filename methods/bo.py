@@ -38,6 +38,13 @@ class BO():
             self.optimizer_options = {}
 
         self.options = options.copy()
+        # Sometimes used to save execution times of the acquisitno function
+        if 'timing' in options:
+            self.timing = options['timing']
+        else:
+            self.timing = False
+
+        self.timings = []
 
     def bayesian_optimization(self, X0, y0, objective):
         '''
