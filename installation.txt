@@ -1,8 +1,8 @@
-# GPy, numdifftools, gitpython
-pip install GPy numdifftools gitpython
+pip install GPy==1.8.4
+pip install numdifftools gitpython
 
 # Install the following MODIFIED version of GPyOpt
-# https://github.com/nrontsis/GPyOpt
+# https://github.com/nrontsis/GPyOpt/tree/d3427aa464d2882c6ab12204592f187367190c18
 # Run from inside the modified GPyOpt folder
 python setup.py develop
 
@@ -16,5 +16,5 @@ conda install -c mosek mosek=8.0.81
 
 # Conda's R and Diceoptim
 conda install -c r rpy2=2.8.5
-# From inside R
+# From inside R install DiceOptim v2
 install.packages("DiceOptim")
