@@ -1,0 +1,24 @@
+# Python, Anaconda: 3.6.2
+
+conda install -c cvxgrp cvxpy
+conda install -c mosek mosek=8.0.81
+# Requires license in ~/mosek/mosek.lic
+pip install GPy=1.7.7
+pip install gitpython
+conda install numpy scipy matplotlib
+
+# Install modified GPyOpt version
+# https://github.com/nrontsis/GPyOpt/tree/32987f1523676e2ade0f2e81c89ef608f59e7e67
+# (Run: pip install .)
+
+conda install -c r rpy2=2.8.5
+
+# Install modified DiceOptim version
+# https://github.com/nrontsis/DiceOptim/tree/643c7f66a78f4276239125e8a4f5872bd5c30e67
+# (Run: build(./) and install(./) from R, when inside DiceOptim's folder)
+
+pip install --upgrade tensorflow=1.3.0
+
+# gpflow==0.4.1
+# https://github.com/GPflow/GPflow/tree/69364c2b79e1e6dd0fe7419377a044c0bdedb4f5
+# (Run pip install .)
