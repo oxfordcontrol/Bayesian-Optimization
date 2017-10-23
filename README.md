@@ -19,7 +19,7 @@ The `out` folder is where the output of each run is saved, while the `results` f
 The functionality of `gp_comparisons.py`, `synthetic_experiments.py` and `plot_experiments.py` is described below.
 
 ## Reproduce the results of the papers
-The results of the [paper](https://arxiv.org/abs/1707.04191) can be reproduced by running the script `run_me.sh`. This script calls internally `gp_posteriors.py`, `plot_ei_vs_batch.py`, `run.py` and `plot_experiments.py`.
+The results of the [paper](https://arxiv.org/abs/1707.04191) can be reproduced by running the script `run_me.sh`, which saves a number of figures in the `results` folder. This script calls internally `gp_posteriors.py`, `plot_ei_vs_batch.py`, `run.py` and `plot_experiments.py`.
 
 ## Timing results
 To compare the timing of OEI as compared to QEI refer to the [GPy implementation](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPy-based), as this avoids the overhead associated with TensorFlow:
