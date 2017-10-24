@@ -1,5 +1,5 @@
 # Bayesian-Optimization
-A comparison framework for different acquisition functions. This is the code used to evaluate the performance of the new acquisition function, Optimistic Expected Improvement, against the state of the art in the [paper](https://arxiv.org/abs/1707.04191) Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
+A comparison framework for different acquisition functions. This is the code used to evaluate the performance of the new acquisition function, Optimistic Expected Improvement, against the state of the art in the [paper](https://arxiv.org/abs/1707.04191) *Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization* by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
 
 ## Installation
 This package was written in python 3.6 and uses the packages listed in `installation.txt`.
@@ -22,4 +22,4 @@ The functionality of `gp_comparisons.py`, `synthetic_experiments.py` and `plot_e
 The results of the [paper](https://arxiv.org/abs/1707.04191) can be reproduced by running the script `run_me.sh`, which saves a number of figures in the `results` folder. This script calls internally `gp_posteriors.py`, `plot_ei_vs_batch.py`, `run.py` and `plot_experiments.py`.
 
 ## Timing results
-To compare the timing of OEI as compared to QEI refer to the [GPy implementation](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPy-based), as this avoids the overhead associated with TensorFlow:
+To compare the timing of `OEI` as compared to `QEI` refer to the [GPy implementation](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPy-based), as this avoids the overhead associated with `TensorFlow`.
