@@ -1,4 +1,7 @@
 #!/bin/sh
+# Number of threads to use. The code takes a lot of time: do use multithreading.
+threads=4
+
 # Use only one thread per python call
 export OMP_NUM_THREADS=1
 # Disable TensorFlow warnings
@@ -13,7 +16,6 @@ python gp_posteriors.py --plot_posteriors=1 --seed=130 --num_seeds=1 --batch_siz
 # Run the experiments
 for algorithm in 'OEI' 'QEI' 'QEI_CL' 'LP_EI'; do
     num_seeds=200
-	threads=40
 	seeds_per_thread=$((num_seeds/threads))
 	thread=0
 	while [  $thread -lt $threads ]; do
@@ -45,7 +47,6 @@ for function in 'branin' 'cosines' 'sixhumpcamel' 'loghart6'; do
     fi
     for algorithm in 'QEI' 'LP_EI' 'BLCB' 'Random'; do
         num_seeds=40
-        threads=40
         seeds_per_thread=$((num_seeds/threads))
         thread=0
         while [  $thread -lt $threads ]; do
@@ -59,7 +60,6 @@ for function in 'branin' 'cosines' 'sixhumpcamel' 'loghart6'; do
         # python run.py --function=$function --algorithm=$algorithm --initial_size=$initial_size --iterations=$iterations --noise=1e-6 --num_seeds=40
     done
     num_seeds=40
-    threads=40
     seeds_per_thread=$((num_seeds/threads))
     thread=0
     while [  $thread -lt $threads ]; do
