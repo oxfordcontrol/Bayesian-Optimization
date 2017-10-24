@@ -146,10 +146,15 @@ class BO(GPR):
         par_min = self.get_free_state().copy()
         val_min = obj(par_min)[0]
         for i in range(restarts):
-            self.randomize()
-            self.optimize(**kwargs)
-            x = self.get_free_state().copy()
-            val = obj(x)[0]
+            try:
+                self.randomize()
+                self.optimize(**kwargs)
+                x = self.get_free_state().copy()
+                val = obj(x)[0]
+            except KeyboardInterrupt:
+                raise
+            except:
+                val = float("inf")
 
             if val < val_min:
                 par_min = x
