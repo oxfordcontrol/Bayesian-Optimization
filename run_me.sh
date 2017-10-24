@@ -1,5 +1,10 @@
 #!/bin/sh
+# Use only one thread per python call
+export OMP_NUM_THREADS=1
+# Disable TensorFlow warnings
 export TF_CPP_MIN_LOG_LEVEL=2
+# Delete old results
+rm -rf out/*_*
 
 # Figure 1
 python gp_posteriors.py --plot_posteriors=1 --seed=130 --num_seeds=1 --batch_size=3 --opt_restarts=500
