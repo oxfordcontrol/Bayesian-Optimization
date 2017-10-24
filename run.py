@@ -49,10 +49,14 @@ def run(bo, seed, robust=True, save=False):
     if save:
         save_folder = 'out/' + bo.options['job_name'] + '/'
         filepath = save_folder + str(seed) + '.npz'
-        if not os.path.exists(save_folder):
+        try:
             os.makedirs(save_folder)
-        if os.path.isfile(filepath):
+        except OSError:
+            pass
+        try:
             os.remove(filepath)
+        except OSError:
+            pass
 
         np.savez(filepath, X=X, Y=Y)
 
@@ -115,10 +119,14 @@ def main(args):
     # Save command line arguments
     save_folder = 'out/' + bo.options['job_name'] + '/'
     filepath = save_folder + 'arguments.pkl'
-    if not os.path.exists(save_folder):
+    try:
         os.makedirs(save_folder)
-    if os.path.isfile(filepath):
+    except OSError:
+        pass
+    try:
         os.remove(filepath)
+    except OSError:
+        pass
     with open(filepath, 'wb') as file:
         pickle.dump(args, file, pickle.HIGHEST_PROTOCOL)
 
