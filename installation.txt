@@ -8,7 +8,7 @@ pip install gitpython
 conda install numpy scipy matplotlib
 
 # Install modified GPyOpt version
-# https://github.com/nrontsis/GPyOpt/tree/32987f1523676e2ade0f2e81c89ef608f59e7e67
+# https://github.com/nrontsis/GPyOpt/tree/eb0206d1b61c187d224e33853807049a4f50ce11
 # (Run: pip install .)
 
 conda install -c r rpy2=2.8.5
