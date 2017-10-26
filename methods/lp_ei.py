@@ -1,6 +1,8 @@
 from .bo import BO
 import GPyOpt
 import numpy as np
+import tensorflow as tf
+import random
 import copy
 
 
@@ -29,8 +31,10 @@ class LP_EI(BO):
         super(LP_EI, self).__init__(options)
 
     def bayesian_optimization(self, seed):
-        # Set seed
-        np.random.seed(seed)
+        # Set random seed: Numpy, Tensorflow, Python 
+        tf.set_random_seed(seed)
+        seed(seed)
+        random.seed(seed)
 
         objective = copy.copy(self.options['objective'])
         X0 = self.random_sample(self.bounds, self.initial_size)

@@ -1,5 +1,7 @@
 from gpflow.gpr import GPR
 import numpy as np
+import tensorflow as tf
+import random
 import copy
 from .solvers import solve
 import sys
@@ -41,8 +43,10 @@ class BO(GPR):
         '''
         self.seed = seed
 
-        # Set seed
-        np.random.seed(seed)
+        # Set random seed: Numpy, Tensorflow, Python 
+        tf.set_random_seed(seed)
+        seed(seed)
+        random.seed(seed)
 
         # Copy the objective. This is essential when testing draws from GPs
         objective = copy.copy(self.options['objective'])
