@@ -45,9 +45,15 @@ class LP_EI(BO):
             domain.append({'name': 'var_' + str(i + 1), 'type': 'continuous',
                           'domain': self.bounds[i]})
 
+        if self.options['noise'] is None:
+            exact_feval = False
+        else:
+            exact_feval = True
+        
         model = GPyOpt.models.\
             gpmodel.GPModel(kernel=self.options['kernel'].copy(),
                             noise_var=self.options['noise'],
+                            exact_feval=exact_feval,
                             optimize_restarts=self.options['model_restarts'],
                             normalize_Y=self.options['normalize_Y'],
                             verbose=False,
@@ -63,6 +69,8 @@ class LP_EI(BO):
         bo = GPyOpt.methods.BayesianOptimization(
             f=objective.f,
             normalize_Y=self.options['normalize_Y'],  # in ContAcqOptimizer
+            noise_var=self.options['noise'],
+            exact_feval=exact_feval,
             domain=domain,
             X=X0,
             Y=y0,
