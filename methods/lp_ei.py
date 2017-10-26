@@ -33,7 +33,7 @@ class LP_EI(BO):
     def bayesian_optimization(self, seed):
         # Set random seed: Numpy, Tensorflow, Python 
         tf.set_random_seed(seed)
-        seed(seed)
+        np.random.seed(seed)
         random.seed(seed)
 
         objective = copy.copy(self.options['objective'])

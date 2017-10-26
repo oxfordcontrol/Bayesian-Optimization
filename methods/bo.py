@@ -45,7 +45,7 @@ class BO(GPR):
 
         # Set random seed: Numpy, Tensorflow, Python 
         tf.set_random_seed(seed)
-        seed(seed)
+        np.random.seed(seed)
         random.seed(seed)
 
         # Copy the objective. This is essential when testing draws from GPs
