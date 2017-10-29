@@ -4,6 +4,7 @@ from .bo import BO
 from gpflow.param import AutoFlow
 from gpflow._settings import settings
 import tensorflow as tf
+import logging
 float_type = settings.dtypes.float_type
 
 
@@ -20,12 +21,16 @@ class OEI(BO):
         The acquisition function, supporting sampling
         of the hyperparameters
         '''
+        k = x.size // self.dim
+        X = x.reshape(k, self.dim)
+
+        logging.getLogger('opt').debug(
+            'X:' + str(X)
+        )
+
         if self.options['samples'] == 0:
             return self.acquisition_no_sample(x)
         else:
-            k = x.size // self.dim
-            X = x.reshape(k, self.dim)
-
             N = self.samples.shape[0]
             omegas = np.zeros((k+1, k+1, N))
             for i, s in self.samples.iterrows():
@@ -148,5 +153,15 @@ class OEI(BO):
         Y_return = []
         for y in Y:
             Y_return.append(np.asarray(y.value))
+
+        logging.getLogger('opt').debug(
+            'omega:' + str(omega)
+        )
+
+        if prob.status != 'optimal':
+            logging.getLogger('opt').warning(
+                'SDP:' + str(prob.status) + ' It:' +
+                str(prob.solver_stats.num_iters)
+            )
 
         return opt_val, M, Y_return, C

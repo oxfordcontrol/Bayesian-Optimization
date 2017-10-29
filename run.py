@@ -17,6 +17,8 @@ class scale_function():
         self.function = function
         self.bounds[:, 0] = -1/2 
         self.bounds[:, 1] = 1/2 
+        if hasattr(function, 'fmin'):
+            self.fmin = function.fmin
 
     def f(self, X):
         means = (self.function.bounds[:, 1] + self.function.bounds[:, 0])/2

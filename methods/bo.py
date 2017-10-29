@@ -4,7 +4,11 @@ import tensorflow as tf
 import random
 import copy
 from .solvers import solve
-import sys
+import logging.config
+import shutil
+import os
+import re
+import yaml
 
 
 class BO(GPR):
@@ -42,6 +46,17 @@ class BO(GPR):
         This function implements the main loop of Bayesian Optimization
         '''
         self.seed = seed
+        self.log_folder = 'log/' + self.options['job_name'] + '/' + str(seed) + '/'
+        if os.path.exists(self.log_folder):
+            shutil.rmtree(self.log_folder)
+        os.makedirs(self.log_folder)
+        # Load config file
+        with open('logging.yaml', 'r') as f:
+            config = f.read()
+        # Prepend logging folder
+        config = config.replace('PATH/', self.log_folder)
+        # Setup logging
+        logging.config.dictConfig(yaml.load(config))
 
         # Set random seed: Numpy, Tensorflow, Python 
         tf.set_random_seed(seed)
@@ -65,8 +80,24 @@ class BO(GPR):
         X_all = X0
         y_all = y0
 
+        logger = logging.getLogger('evals')
+        logger.info('----------------------------')
+        logger.info('Bounds:\n' + str(self.bounds))
+        if hasattr(objective, 'fmin'):
+            logger.info('Minimum value:' + str(objective.fmin))
+        logger.info('----------------------------')
+        for i in range(len(X0)):
+            logger.info(
+                'X:' + str(X0[i, :]) + ' y: ' + str(y0[i, :])
+            )
+
         for i in range(self.iterations):
             self.optimize_restarts(restarts=self.options['model_restarts'])
+
+            logging.getLogger('').info('#Iteration:' + str(i + 1))
+            # Remove non-printable characters (bold identifiers)
+            ansi_escape = re.compile(r'\x1b[^m]*m')
+            logging.getLogger('model').info(ansi_escape.sub('', str(self)))
 
             if self.options['samples'] > 0:
                 # Draw samples of the hyperparameters from the posterior
@@ -76,6 +107,11 @@ class BO(GPR):
             # Evaluate the black-box function at the suggested points
             X_new = self.get_suggestion(self.batch_size)
             y_new = objective.f(X_new)
+
+            for i in range(len(X_new)):
+                logging.getLogger('evals').info(
+                    'X:' + str(X_new[i, :]) + ' y: ' + str(y_new[i, :])
+                )
 
             # Append the algorithm's choice X_new to X_all
             # Add the function evaluations f(X_new) to y_all
@@ -103,6 +139,7 @@ class BO(GPR):
         for j in range(self.options['opt_restarts']):
             # Initial point of the optimization
             X_init = self.random_sample(self.bounds, batch_size)
+            y_init = self.acquisition(X_init)[0]
 
             try:
                 X0, y0, status = solve(X_init=X_init,
@@ -115,12 +152,27 @@ class BO(GPR):
                 # the best one found so far
                 if X is None or y0 < y:
                     X, y = X0, y0
+
+                # print('Opt_it:', j)
+
+                logging.getLogger('opt').info(
+                    '##Opt_it:' + str(j + 1) + ' Val:' + '%.2e' % y0 +
+                    ' Diff:' + '%.2e' % (y_init - y0) +
+                    ' It:' + str(status.nit)
+                )
+                if not status.success:
+                    logging.getLogger('opt').warning(
+                        'NL opt not successful. Message:' + str(status.message)
+                    )
             except KeyboardInterrupt:
                 raise
+                '''
             except:
-                print('Optimization #', j,
-                      'of the acquisition function failed!',
-                      file=sys.stderr)
+                logging.getLogger('opt').warning(
+                    'Optimization #' + str(j) +
+                    'of the acquisition function failed!'
+                )
+                '''
 
         # Assert that at least one optimization run succesfully
         assert X is not None
