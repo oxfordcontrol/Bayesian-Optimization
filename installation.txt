@@ -5,7 +5,7 @@ conda install -c mosek mosek=8.0.81
 # Requires license in ~/mosek/mosek.lic
 pip install GPy=1.7.7
 pip install gitpython
-conda install numpy scipy matplotlib
+conda install numpy scipy matplotlib pyyalm
 
 # Install modified GPyOpt version
 # https://github.com/nrontsis/GPyOpt/tree/eb0206d1b61c187d224e33853807049a4f50ce11
