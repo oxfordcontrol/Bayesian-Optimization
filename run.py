@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import tensorflow as tf
+import random
 import argparse
 import gpflow
 import GPy
@@ -7,34 +9,33 @@ import GPyOpt
 import methods
 import time
 import pickle
-from test_functions import hart6, loghart6
+from test_functions import hart6, loghart6, scale_function
 import copy
 
-
-class scale_function():
-    def __init__(self, function):
-        self.bounds = function.bounds.astype(float)
-        self.function = function
-        self.bounds[:, 0] = -1/2 
-        self.bounds[:, 1] = 1/2 
-        if hasattr(function, 'fmin'):
-            self.fmin = function.fmin
-
-    def f(self, X):
-        means = (self.function.bounds[:, 1] + self.function.bounds[:, 0])/2
-        lengths = self.function.bounds[:, 1] - self.function.bounds[:, 0]
-
-        Xtrue = np.zeros(X.shape)
-        for i in range(X.shape[0]):
-            Xtrue[i, :] = X[i, :] * lengths + means
-
-        return self.function.f(Xtrue)
+algorithms = {
+    'OEI': methods.OEI,
+    'QEI': methods.QEI,
+    'QEI_CL': methods.QEI_CL,
+    'LP_EI': methods.LP_EI,
+    'BLCB': methods.BLCB,
+    'Random_EI': methods.Random_EI,
+    'Random': methods.Random
+}
 
 
-def run(bo, seed, robust=True, save=False):
-    start = time.time()
+def run(options, seed, robust=False, save=False):
+    options['seed'] = seed
+    # Set random seed: Numpy, Tensorflow, Python 
+    tf.reset_default_graph()
+    tf.set_random_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+    bo = algorithms[options['algorithm']](options)
+
     try:
-        X, Y = bo.bayesian_optimization(seed)
+        start = time.time()
+        X, Y = bo.bayesian_optimization()
         end = time.time()
         print('Done with:', bo.options['job_name'], 'seed:', seed,
               'Time:', '%.2f' % ((end - start)/60), 'min')
@@ -73,16 +74,6 @@ def main(args):
         'loghart6': loghart6()
     }
 
-    algorithms = {
-        'OEI': methods.OEI,
-        'QEI': methods.QEI,
-        'QEI_CL': methods.QEI_CL,
-        'LP_EI': methods.LP_EI,
-        'BLCB': methods.BLCB,
-        'Random_EI': methods.Random_EI,
-        'Random': methods.Random
-    }
-
     kernels_gpflow = {
         'RBF': gpflow.kernels.RBF,
         'Matern32': gpflow.kernels.Matern32,
@@ -116,10 +107,9 @@ def main(args):
         )
 
     options['job_name'] = options['function'] + '_' + options['algorithm']
-    bo = algorithms[options['algorithm']](options)
 
     # Save command line arguments
-    save_folder = 'out/' + bo.options['job_name'] + '/'
+    save_folder = 'out/' + options['job_name'] + '/'
     filepath = save_folder + 'arguments.pkl'
     try:
         os.makedirs(save_folder)
@@ -132,11 +122,8 @@ def main(args):
     with open(filepath, 'wb') as file:
         pickle.dump(args, file, pickle.HIGHEST_PROTOCOL)
 
-    seed_start = options['seed']
-    seed_end = seed_start + options['num_seeds']
-    # print(options)
-    for seed in range(seed_start, seed_end):
-        run(bo, seed, robust=options['robust'], save=options['save'])
+    for seed in range(args.seed, args.seed + args.num_seeds):
+        run(options, seed=seed, save=options['save'])
 
 
 if __name__ == '__main__':
@@ -144,8 +131,7 @@ if __name__ == '__main__':
     parser.add_argument('--function', default='branin')
     parser.add_argument('--algorithm', default='OEI')
     parser.add_argument('--seed', type=int, default=123)
-    parser.add_argument('--num_seeds', type=int, default=5)
-    parser.add_argument('--robust', type=int, default=1)
+    parser.add_argument('--num_seeds', type=int, default=1)
     parser.add_argument('--save', type=int, default=1)
 
     parser.add_argument('--samples', type=int, default=0)

@@ -2,6 +2,26 @@ import numpy as np
 from gpflow.gpr import GPR
 
 
+class scale_function():
+    def __init__(self, function):
+        self.bounds = function.bounds.astype(float)
+        self.function = function
+        self.bounds[:, 0] = -1/2 
+        self.bounds[:, 1] = 1/2 
+        if hasattr(function, 'fmin'):
+            self.fmin = function.fmin
+
+    def f(self, X):
+        means = (self.function.bounds[:, 1] + self.function.bounds[:, 0])/2
+        lengths = self.function.bounds[:, 1] - self.function.bounds[:, 0]
+
+        Xtrue = np.zeros(X.shape)
+        for i in range(X.shape[0]):
+            Xtrue[i, :] = X[i, :] * lengths + means
+
+        return self.function.f(Xtrue)
+
+
 class gp:
     '''
     This class implements draws from a GP.

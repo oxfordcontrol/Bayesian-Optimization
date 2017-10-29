@@ -30,12 +30,7 @@ class LP_EI(BO):
         '''
         super(LP_EI, self).__init__(options)
 
-    def bayesian_optimization(self, seed):
-        # Set random seed: Numpy, Tensorflow, Python 
-        tf.set_random_seed(seed)
-        np.random.seed(seed)
-        random.seed(seed)
-
+    def bayesian_optimization(self):
         objective = copy.copy(self.options['objective'])
         X0 = self.random_sample(self.bounds, self.initial_size)
         y0 = objective.f(X0)

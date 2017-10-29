@@ -1,2 +1,1 @@
-from .benchmark_functions import gp, hart6, loghart6
-# from .svm_mnist import svm_mnist
+from .benchmark_functions import scale_function, gp, hart6, loghart6

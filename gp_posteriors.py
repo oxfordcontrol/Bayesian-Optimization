@@ -3,8 +3,8 @@ import argparse
 import gpflow
 import GPy
 import tensorflow as tf
+import random
 import methods
-import time
 from test_functions import gp
 import copy
 import os
@@ -84,44 +84,48 @@ def main(args):
     mean_function_gpy.update_gradients = lambda a, b: None
     options_gpy['mean_function'] = mean_function_gpy
 
-    # Create objects that will act as evaluators for qei, oei
-    qei_evaluator = methods.QEI(options)
-    oei_evaluator = methods.OEI(options)
-    if options['noise'] is not None:
-        oei_evaluator.likelihood.variance = options['noise']
-        oei_evaluator.likelihood.variance.fixed = True
-
-        qei_evaluator.likelihood.variance = options['noise']
-        qei_evaluator.likelihood.variance.fixed = True
-
     if not args.plot_posteriors:
-        print('----', options['job_name'], '----')
         num_batches = args.batch_size_max - args.batch_size + 1
         results = np.zeros((num_batches, options['num_seeds']))
         results_sampling = np.zeros((num_batches, options['num_seeds']))
         for batch_size in range(args.batch_size, args.batch_size_max + 1):
-            print('  -> Batch size:', batch_size)
             batch_idx = batch_size - args.batch_size
             options['batch_size'] = batch_size
             options_gpy['batch_size'] = batch_size
 
-            seed_start = options['seed']
+            seed_start = args.seed
             seed_end = seed_start + options['num_seeds']
             for seed in range(seed_start, seed_end):
+                options['seed'] = seed
+                tf.reset_default_graph()
+                tf.set_random_seed(seed)
+                np.random.seed(seed)
+                random.seed(seed)
+
                 seed_idx = seed - seed_start
-                start = time.time()
+
                 options['job_name'] = 'bo_' + options['algorithm']
                 if options['algorithm'] != 'LP_EI':
                     bo = algorithms[options['algorithm']](options)
                 else:
                     bo = algorithms[options_gpy['algorithm']](options_gpy)
 
-                X, Y = bo.bayesian_optimization(seed)
+                X, Y = bo.bayesian_optimization()
 
                 X_init = X[:options['initial_size'], :]
                 Y_init = Y[:options['initial_size'], 0:1]
 
                 X_choice = X[-options['batch_size']:, :]
+
+                # Create objects that will act as evaluators for qei, oei
+                qei_evaluator = methods.QEI(options)
+                oei_evaluator = methods.OEI(options)
+                if options['noise'] is not None:
+                    oei_evaluator.likelihood.variance = options['noise']
+                    oei_evaluator.likelihood.variance.fixed = True
+
+                    qei_evaluator.likelihood.variance = options['noise']
+                    qei_evaluator.likelihood.variance.fixed = True
 
                 qei_evaluator.X = X_init
                 qei_evaluator.Y = Y_init
@@ -172,14 +176,6 @@ def main(args):
                     fig.tight_layout()
                     plt.savefig('results/qei_problem_' + str(seed) + '.pdf')
 
-                end = time.time()
-                print(seed - seed_start, ":", int(end-start), end='|')
-
-            print('')
-            print('Mean qEI:', '%.3f' % np.mean(results[batch_idx]))
-            print('Mean (sampled) EI:', '%.3f' %
-                  np.mean(results_sampling[batch_idx]))
-
         # Save results
         save_folder = 'out/' + bo.options['job_name'] + '/'
         filepath = save_folder + str(seed_start) + \
@@ -203,30 +199,38 @@ def main(args):
             # 'Random_EI': methods.Random_EI,
             # 'Random': methods.Random
         }
-        seed_start = options['seed']
+        seed_start = args.seed
         seed_end = seed_start + options['num_seeds']
         for seed in range(seed_start, seed_end):
-            start = time.time()
+            options['seed'] = seed
 
             choices = []
             for name, algorithm in algorithms_considered.items():
+                tf.reset_default_graph()
+                tf.set_random_seed(seed)
+                np.random.seed(seed)
+                random.seed(seed)
+
                 options['job_name'] = 'gp_' + name
                 if name != 'LP_EI':
                     bo = algorithm(options)
                 else:
                     bo = algorithm(options_gpy)
-                X, Y = bo.bayesian_optimization(seed)
+                X, Y = bo.bayesian_optimization()
 
                 X_init = X[:options['initial_size'], :]
                 Y_init = Y[:options['initial_size'], 0:1]
                 X_choice = X[-options['batch_size']:, :]
                 choices.append(X_choice)
 
+            # Create auxiliary object to plot posterior
+            qei_evaluator = methods.QEI(options)
+            if options['noise'] is not None:
+                qei_evaluator.likelihood.variance = options['noise']
+                qei_evaluator.likelihood.variance.fixed = True
+
             qei_evaluator.X = X_init
             qei_evaluator.Y = Y_init
-            oei_evaluator.X = X_init
-            oei_evaluator.Y = Y_init
-
             fig = plt.figure()
             ax = fig.add_subplot(111)
             xx = np.linspace(-1, 1, 500)[:, None]
@@ -252,7 +256,6 @@ def main(args):
 
             ax.legend()
             plt.savefig('results/posterior_' + str(seed) + '.pdf')
-            end = time.time()
             print(seed - seed_start, ":", int(end-start), end='|')
 
 
@@ -260,7 +263,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--algorithm', default='OEI')
     parser.add_argument('--seed', type=int, default=123)
-    parser.add_argument('--num_seeds', type=int, default=10)
+    parser.add_argument('--num_seeds', type=int, default=1)
     parser.add_argument('--robust', type=int, default=1)
 
     parser.add_argument('--samples', type=int, default=0)

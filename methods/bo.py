@@ -41,15 +41,20 @@ class BO(GPR):
             self.likelihood.variance = self.options['noise']
             self.likelihood.variance.fixed = True
 
-    def bayesian_optimization(self, seed):
+    def bayesian_optimization(self):
         '''
         This function implements the main loop of Bayesian Optimization
         '''
-        self.seed = seed
-        self.log_folder = 'log/' + self.options['job_name'] + '/' + str(seed) + '/'
-        if os.path.exists(self.log_folder):
-            shutil.rmtree(self.log_folder)
-        os.makedirs(self.log_folder)
+        if 'seed' in self.options:
+            self.log_folder = 'log/' + self.options['job_name'] + '/' + \
+                str(self.options['seed']) + '/'
+        else:
+            self.log_folder = 'log/' + self.options['job_name'] + '/'
+
+        try:
+            os.makedirs(self.log_folder)
+        except OSError:
+            pass
         # Load config file
         with open('logging.yaml', 'r') as f:
             config = f.read()
@@ -57,11 +62,6 @@ class BO(GPR):
         config = config.replace('PATH/', self.log_folder)
         # Setup logging
         logging.config.dictConfig(yaml.load(config))
-
-        # Set random seed: Numpy, Tensorflow, Python 
-        tf.set_random_seed(seed)
-        np.random.seed(seed)
-        random.seed(seed)
 
         # Copy the objective. This is essential when testing draws from GPs
         objective = copy.copy(self.options['objective'])
