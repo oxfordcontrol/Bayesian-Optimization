@@ -10,7 +10,7 @@ export TF_CPP_MIN_LOG_LEVEL=2
 rm -rf out/*_*
 
 # Figure 1
-python gp_posteriors.py --plot_posteriors=1 --seed=130 --num_seeds=1 --batch_size=3 --opt_restarts=500
+python gp_posteriors.py --plot_posteriors=1 --seed=130 --num_seeds=1 --batch_size=3 --opt_restarts=30
 
 # Figure 2
 # Run the experiments
