@@ -62,6 +62,10 @@ class OEI(BO):
         fmin = np.min(self.Y.value)
         M = self.sdp(self.omega(X), fmin)[1]
         obj, gradient = self.acquisition_tf(X, M)
+        logging.getLogger('opt').debug(
+            'a:' + str(obj) +
+            ' da/dX:' + str(gradient)
+        )
         return obj, gradient
 
     @AutoFlow((float_type, [None, None]), (float_type, [None, None]))

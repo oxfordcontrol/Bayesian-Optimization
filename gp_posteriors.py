@@ -110,6 +110,7 @@ def main(args):
             for seed in range(seed_start, seed_end):
                 seed_idx = seed - seed_start
                 start = time.time()
+                options['job_name'] = 'bo_' + options['algorithm']
                 if options['algorithm'] != 'LP_EI':
                     bo = algorithms[options['algorithm']](options)
                 else:
@@ -209,6 +210,7 @@ def main(args):
 
             choices = []
             for name, algorithm in algorithms_considered.items():
+                options['job_name'] = 'gp_' + name
                 if name != 'LP_EI':
                     bo = algorithm(options)
                 else:
