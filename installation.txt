@@ -1,6 +1,6 @@
 # Python, Anaconda: 3.6.2
 
-conda install -c cvxgrp cvxpy
+conda install -c cvxgrp cvxpy=0.4.9
 conda install -c mosek mosek=8.0.81
 # Requires license in ~/mosek/mosek.lic
 pip install GPy=1.7.7
