@@ -18,9 +18,9 @@ for algorithm in 'OEI' 'QEI' 'QEI_CL' 'LP_EI'; do
     seed=123
     seed_end=$(($seed_start+200))
 
-    while [ $seed -le $seed_end ]; do
-        i=1
-        while [ $i -le $threads ] && [ $seed -le $seed_end ]; do
+    while [ $seed -lt $seed_end ]; do
+        i=0
+        while [ $i -lt $threads ] && [ $seed -lt $seed_end ]; do
             python gp_posteriors.py --algorithm=$algorithm --seed=$seed &
             i=$(($i+1))
             seed=$(($seed+1))
@@ -48,9 +48,9 @@ for function in 'branin' 'cosines' 'sixhumpcamel' 'loghart6'; do
     fi
     for algorithm in 'QEI' 'LP_EI' 'BLCB' 'Random'; do
         seed=$seed_start
-        while [ $seed -le $seed_end ]; do
-            i=1
-            while [ $i -le $threads ] && [ $seed -le $seed_end ]; do
+        while [ $seed -lt $seed_end ]; do
+            i=0
+            while [ $i -lt $threads ] && [ $seed -lt $seed_end ]; do
                 python run.py --seed=$seed --function=$function --algorithm=$algorithm --initial_size=$initial_size --iterations=$iterations --noise=1e-6 &
                 i=$(($i+1))
                 seed=$(($seed+1))
@@ -59,9 +59,9 @@ for function in 'branin' 'cosines' 'sixhumpcamel' 'loghart6'; do
         done
     done
     seed=$seed_start
-    while [ $seed -le $seed_end ]; do
-        i=1
-        while [ $i -le $threads ] && [ $seed -le $seed_end ]; do
+    while [ $seed -lt $seed_end ]; do
+        i=0
+        while [ $i -lt $threads ] && [ $seed -lt $seed_end ]; do
             python run.py --seed=$seed --function=$function --algorithm='OEI' --initial_size=$initial_size --iterations=$iterations --noise=1e-6 --samples=100 --priors=1 &
             i=$(($i+1))
             seed=$(($seed+1))
