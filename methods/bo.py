@@ -166,13 +166,11 @@ class BO(GPR):
                     )
             except KeyboardInterrupt:
                 raise
-                '''
             except:
                 logging.getLogger('opt').warning(
                     'Optimization #' + str(j) +
                     'of the acquisition function failed!'
                 )
-                '''
 
         # Assert that at least one optimization run succesfully
         assert X is not None
