@@ -137,11 +137,11 @@ class BO(GPR):
         # Run local gradient-descent optimizer multiple times
         # to avoid getting stuck in a poor local optimum
         for j in range(self.options['opt_restarts']):
-            # Initial point of the optimization
-            X_init = self.random_sample(self.bounds, batch_size)
-            y_init = self.acquisition(X_init)[0]
-
             try:
+                # Initial point of the optimization
+                X_init = self.random_sample(self.bounds, batch_size)
+                y_init = self.acquisition(X_init)[0]
+
                 X0, y0, status = solve(X_init=X_init,
                                        bounds=bounds_tiled,
                                        hessian=self.hessian,
