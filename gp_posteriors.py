@@ -256,7 +256,6 @@ def main(args):
 
             ax.legend()
             plt.savefig('results/posterior_' + str(seed) + '.pdf')
-            print(seed - seed_start, ":", int(end-start), end='|')
 
 
 if __name__ == '__main__':
