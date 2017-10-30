@@ -104,7 +104,7 @@ def main(args):
 
                 seed_idx = seed - seed_start
 
-                options['job_name'] = 'bo_' + options['algorithm']
+                options['job_name'] = 'gp_' + options['algorithm']
                 if options['algorithm'] != 'LP_EI':
                     bo = algorithms[options['algorithm']](options)
                 else:

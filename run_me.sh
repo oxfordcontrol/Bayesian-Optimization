@@ -1,6 +1,6 @@
 #!/bin/sh
 # Number of threads to use. The code takes a lot of time: do use multithreading.
-threads=4
+threads=3
 
 # Use only one thread per python call
 export OMP_NUM_THREADS=1
@@ -8,6 +8,7 @@ export OMP_NUM_THREADS=1
 export TF_CPP_MIN_LOG_LEVEL=2
 # Delete old results
 rm -rf out/*_*
+rm -rf log/*_*
 
 # Figure 1
 python gp_posteriors.py --plot_posteriors=1 --seed=130 --batch_size=3 --opt_restarts=30
