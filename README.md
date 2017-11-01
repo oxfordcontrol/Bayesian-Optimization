@@ -1,8 +1,8 @@
 # Bayesian-Optimization
-A comparison framework for different acquisition functions. This is the code used to evaluate the performance of the new acquisition function, Optimistic Expected Improvement, against the state of the art in the [paper](https://arxiv.org/abs/1707.04191v2) **(version 2 on arXiv)** *Distributionally Robust Optimization Techniques in Batch Bayesian Optimization* by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
+A comparison framework for different batch acquisition functions. This is the code used to evaluate the performance of the new batch acquisition function, Optimistic Expected Improvement, against the state of the art in the [paper](https://arxiv.org/abs/1707.04191v2) **(version 2 on arXiv)** *Distributionally Robust Optimization Techniques in Batch Bayesian Optimization* by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
 
 ## Installation
-This package was written in python 3.6 and uses the packages listed in `installation.txt`.
+This package was written in `Python 3.6` and uses the packages listed in `installation.txt`.
 
 ## Folders organization
 The `methods` folder contains most of the source code. It implements the following acquisition functions (see the [paper](https://arxiv.org/abs/1707.04191v2) **(version 2 on arXiv)** for references and more detailed descriptions)
