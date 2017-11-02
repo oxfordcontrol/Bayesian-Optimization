@@ -16,8 +16,6 @@ Each of these is based on the parent class `BO` (`bo.py`) that implements a simp
 
 The `out` folder is where the output of each run is saved, while the `results` folder is where the final figures are produced. The `test_functions` folder defines synthetic functions that are used as benchmarks for the algorithms.
 
-The functionality of `gp_comparisons.py`, `synthetic_experiments.py` and `plot_experiments.py` is described below.
-
 ## Reproduce the results of the papers
 The results of the [paper](https://arxiv.org/abs/1707.04191) can be reproduced by running the script `run_me.sh`, which saves a number of figures in the `results` folder. This script calls internally `gp_posteriors.py`, `plot_ei_vs_batch.py`, `run.py` and `plot_experiments.py`.
 
