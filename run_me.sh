@@ -15,10 +15,11 @@ python gp_posteriors.py --plot_posteriors=1 --seed=130 --batch_size=3 --opt_rest
 
 # Figure 2
 # Run the experiments
-for algorithm in 'OEI' 'QEI' 'QEI_CL' 'LP_EI'; do
-    seed=123
-    seed_end=$(($seed_start+200))
+seed_start=123
+seed_end=$(($seed_start+200))
 
+for algorithm in 'OEI' 'QEI' 'QEI_CL' 'LP_EI'; do
+    seed=$seed_start
     while [ $seed -lt $seed_end ]; do
         i=0
         while [ $i -lt $threads ] && [ $seed -lt $seed_end ]; do
@@ -35,10 +36,10 @@ python plot_ei_vs_batch.py out/gp_OEI out/gp_QEI out/gp_QEI_CL out/gp_LP_EI
 # Figure 3
 python gp_posteriors.py --algorithm='QEI' --seed=130 --plot_problem=1 --batch_size=5 --opt_restarts=500
 
-seed_start=123
-seed_end=$(($seed_start+40))
 # Figure 4
 # Run the experiments
+seed_start=123
+seed_end=$(($seed_start+40))
 for function in 'branin' 'cosines' 'sixhumpcamel' 'loghart6'; do
     if [ $function == 'loghart6' ]; then
         initial_size=20 
