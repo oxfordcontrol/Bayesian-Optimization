@@ -40,17 +40,7 @@ def qei_sampling(mean, cov, fmin, N=100000):
     return np.mean(imp)
 
 
-def main(args):
-    algorithms = {
-        'OEI': methods.OEI,
-        'QEI': methods.QEI,
-        'QEI_CL': methods.QEI_CL,
-        'LP_EI': methods.LP_EI,
-        'BLCB': methods.BLCB,
-        'Random_EI': methods.Random_EI,
-        'Random': methods.Random
-    }
-
+def create_options(args):
     options = vars(copy.copy(args))
     variance = 10
     lengthscales = np.asarray([1/10])
@@ -83,6 +73,22 @@ def main(args):
         )
     mean_function_gpy.update_gradients = lambda a, b: None
     options_gpy['mean_function'] = mean_function_gpy
+
+    return options, options_gpy
+
+
+def main(args):
+    options, options_gpy = create_options(args)
+
+    algorithms = {
+        'OEI': methods.OEI,
+        'QEI': methods.QEI,
+        'QEI_CL': methods.QEI_CL,
+        'LP_EI': methods.LP_EI,
+        'BLCB': methods.BLCB,
+        'Random_EI': methods.Random_EI,
+        'Random': methods.Random
+    }
 
     if not args.plot_posteriors:
         num_batches = args.batch_size_max - args.batch_size + 1
@@ -258,7 +264,7 @@ def main(args):
             plt.savefig('results/posterior_' + str(seed) + '.pdf')
 
 
-if __name__ == '__main__':
+def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--algorithm', default='OEI')
     parser.add_argument('--seed', type=int, default=123)
@@ -288,5 +294,10 @@ if __name__ == '__main__':
     parser.add_argument('--plot_problem', type=int, default=0)
     parser.add_argument('--plot_posteriors', type=int, default=0)
 
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_parser()
     args = parser.parse_args()
     main(args)
