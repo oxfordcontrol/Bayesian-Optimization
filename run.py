@@ -64,7 +64,7 @@ def run(options, seed, robust=False, save=False):
         np.savez(filepath, X=X, Y=Y)
 
 
-def main(args):
+def create_options(args):
     functions = {
         'branin': GPyOpt.objective_examples.experiments2d.branin(),
         'cosines': GPyOpt.objective_examples.experiments2d.cosines(),
@@ -108,6 +108,12 @@ def main(args):
 
     options['job_name'] = options['function'] + '_' + options['algorithm']
 
+    return options
+
+
+def main(args):
+    options = create_options(args)
+
     # Save command line arguments
     save_folder = 'out/' + options['job_name'] + '/'
     filepath = save_folder + 'arguments.pkl'
@@ -126,7 +132,7 @@ def main(args):
         run(options, seed=seed, save=options['save'])
 
 
-if __name__ == '__main__':
+def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--function', default='branin')
     parser.add_argument('--algorithm', default='OEI')
@@ -152,6 +158,12 @@ if __name__ == '__main__':
     parser.add_argument('--beta_multiplier', type=float, default=.1)
     parser.add_argument('--delta', type=float, default=.1)
     parser.add_argument('--liar_choice', default='mean')
+
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_parser()
     args = parser.parse_args()
 
     main(args)
