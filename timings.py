@@ -2,7 +2,9 @@ import GPy
 import numpy as np
 from methods import QEI, OEI, BO
 import GPyOpt.objective_examples
+from test_functions import benchmark_functions
 import time
+import os
 '''
 This compares the average time computing time for OEI and QEI
 (and their gradients) when performing Bayesian Optimization on 
@@ -11,48 +13,78 @@ a standard 5d optimization function (alpine1).
 
 
 def main():
+    # os.environ["OMP_NUM_THREADS"] = "4"
 
-    options = {'iterations': 1,
-               'gp_opt_restarts': 5,
-               'acq_opt_restarts': 1,
-               'initial_size': 50,
+    options = {
+               # Run only the first iteration,
+               # as the experiments takes a lot of time
+               'iterations': 1,
+               'gp_opt_restarts': 20,  #
+               'acq_opt_restarts': 10,
+               'initial_size': 20,
                'normalize_Y': True,
-               'noiseless': True,
+               'noiseless': False,
+               'noise': 1e-6,
                'solver': 'SCS',         # for oEI
                'timing': True
                }
 
-    input_dim = 5
+    input_dim = 6
     kernel = GPy.kern.RBF(input_dim=input_dim, ARD=True)
     options['kernel'] = kernel
 
-    # Alpine 1 function
+    # Loghart6 function
+    '''
     objective = GPyOpt.objective_examples.experimentsNd.alpine1(
         input_dim=input_dim)
     objective.bounds = np.asarray(objective.bounds)
+    '''
+    objective = benchmark_functions.loghart6()
+    objective.bounds = np.asarray(objective.bounds)
     options['objective'] = objective
-    options['job_name'] = 'alpine1_oEI'
+    options['job_name'] = 'loghart6'
 
-    np.random.seed(123)
+    '''
+    Run once before to avoid initialization timings in the benchmark
+    '''
+    options['batch_size'] = 2
     X0 = BO.random_sample(options['objective'].bounds, options['initial_size'])
     y0 = options['objective'].f(X0)
+    bo_oEI = OEI(options)
+    bo_qEI = QEI(options)
+    bo_oEI.bayesian_optimization(X0, y0, bo_oEI.objective)
+    bo_qEI.bayesian_optimization(X0, y0, bo_qEI.objective)
 
-    for batch_size in range(2, 18, 1):
+    '''
+    Actual benchmark
+    '''
+    for batch_size in range(17, 18, 1):
         options['batch_size'] = batch_size
 
         bo_oEI = OEI(options)
         bo_qEI = QEI(options)
 
+        # Set the seed (same for OEI and QEI)
+        np.random.seed(123)
+        X0 = BO.random_sample(options['objective'].bounds, options['initial_size'])
+        y0 = options['objective'].f(X0)
+
         print('----Batch size:', batch_size, '----')
         start = time.time()
         bo_oEI.bayesian_optimization(X0, y0, bo_oEI.objective)
-        print('OEI:', np.mean(bo_oEI.timings))
-        print('Total time OEI:', time.time() - start)
+        oei_timing = np.mean(bo_oEI.timings)
 
-        start = time.time()
+        # Set the seed (same for OEI and QEI)
+        np.random.seed(123)
+        X0 = BO.random_sample(options['objective'].bounds, options['initial_size'])
+        y0 = options['objective'].f(X0)
+
         bo_qEI.bayesian_optimization(X0, y0, bo_qEI.objective)
-        print('QEI:', np.mean(bo_qEI.timings))
-        print('Total time QEI:', time.time() - start)
+        qei_timing = np.mean(bo_qEI.timings)
+        print('OEI:', "%0.4f" % oei_timing, 'QEI:', "%0.4f" % qei_timing)
+        print('Ratio:', "%0.2f" % (qei_timing/oei_timing))
+        print('OEI:', "%0.4f" % oei_timing)
+        print('Iteration time:', "%0.2f" % (time.time() - start))
 
 
 if __name__ == "__main__":
