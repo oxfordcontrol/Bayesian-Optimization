@@ -180,7 +180,7 @@ class OEI(BO):
         b = np.array([])
 
         C_i = np.zeros((k, k))
-        C_i[-1, -1] = eta
+        C_i[-1, -1] = 0
 
         b = np.append(b, self.pack(C_i, k))
 
@@ -188,6 +188,7 @@ class OEI(BO):
             C_i = np.zeros((k, k))
             C_i[-1, i - 1] = 1/2
             C_i[i - 1, -1] = 1/2
+            C_i[i - 1, -1] = -eta
 
             b = np.append(b, self.pack(C_i, k))
 
@@ -227,7 +228,8 @@ class OEI(BO):
 
         # sol = scs.solve(data, cone, use_indirect=True, eps=1e-4,
         #                 max_iters=10000, verbose=False)
-        sol = scs.solve(data, cone, use_indirect=True, verbose=False)
+        sol = scs.solve(data, cone, use_indirect=True, eps=1e-3,
+                        max_iters=2500, verbose=False)
 
         if sol['info']['status'] != 'Solved':
             print('Solver: solution status ', sol['info']['status'])
@@ -238,10 +240,10 @@ class OEI(BO):
         self.y_list.append(sol['y'])
         self.s_list.append(sol['s'])
 
-        opt_val = -(sol['info']['pobj'] + sol['info']['dobj'])/2 - eta
+        opt_val = -(sol['info']['pobj'] + sol['info']['dobj'])/2
         M = self.unpack(sol['x'], k)
 
-        return opt_val, M
+        return np.asarray([opt_val]), M
 
     @staticmethod
     def pack(Z, n):
