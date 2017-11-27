@@ -23,8 +23,7 @@ def main():
                'acq_opt_restarts': 10,
                'initial_size': 20,
                'normalize_Y': True,
-               'noiseless': False,
-               'noise': 1e-6,
+               'noiseless': True,
                'solver': 'SCS',         # for oEI
                'timing': True
                }
@@ -58,7 +57,8 @@ def main():
     '''
     Actual benchmark
     '''
-    for batch_size in range(17, 18, 1):
+    sizes = np.array([2, 3, 6, 10, 20, 40])
+    for batch_size in sizes:
         options['batch_size'] = batch_size
 
         bo_oEI = OEI(options)
@@ -74,17 +74,19 @@ def main():
         bo_oEI.bayesian_optimization(X0, y0, bo_oEI.objective)
         oei_timing = np.mean(bo_oEI.timings)
 
-        # Set the seed (same for OEI and QEI)
-        np.random.seed(123)
-        X0 = BO.random_sample(options['objective'].bounds, options['initial_size'])
-        y0 = options['objective'].f(X0)
+        if batch_size < 20:
+            # Set the seed (same for OEI and QEI)
+            np.random.seed(123)
+            X0 = BO.random_sample(options['objective'].bounds, options['initial_size'])
+            y0 = options['objective'].f(X0)
 
-        bo_qEI.bayesian_optimization(X0, y0, bo_qEI.objective)
-        qei_timing = np.mean(bo_qEI.timings)
-        print('OEI:', "%0.4f" % oei_timing, 'QEI:', "%0.4f" % qei_timing)
-        print('Ratio:', "%0.2f" % (qei_timing/oei_timing))
-        print('OEI:', "%0.4f" % oei_timing)
-        print('Iteration time:', "%0.2f" % (time.time() - start))
+            bo_qEI.bayesian_optimization(X0, y0, bo_qEI.objective)
+            qei_timing = np.mean(bo_qEI.timings)
+            print('OEI:', "%0.4f" % oei_timing, 'QEI:', "%0.4f" % qei_timing)
+            print('Ratio:', "%0.2f" % (qei_timing/oei_timing))
+        else:
+            print('OEI:', "%0.4f" % oei_timing)
+            print('Iteration time:', "%0.2f" % (time.time() - start))
 
 
 if __name__ == "__main__":

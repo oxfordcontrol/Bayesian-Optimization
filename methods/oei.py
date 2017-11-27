@@ -228,8 +228,7 @@ class OEI(BO):
 
         # sol = scs.solve(data, cone, use_indirect=True, eps=1e-4,
         #                 max_iters=10000, verbose=False)
-        sol = scs.solve(data, cone, use_indirect=True, eps=1e-3,
-                        max_iters=2500, verbose=False)
+        sol = scs.solve(data, cone, eps=1e-3, max_iters=2500, verbose=False)
 
         if sol['info']['status'] != 'Solved':
             print('Solver: solution status ', sol['info']['status'])
