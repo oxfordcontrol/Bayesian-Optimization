@@ -4,7 +4,7 @@
 # SDP Solvers
 # SCS v.2
 # DO RECOMPILE - it can make a big difference in performance. 
-pip install scs>=2.01 --no-binary :all:
+pip install scs>=2.0.1 --no-binary :all:
 # MOSEK 8.0.81 or higher
 conda install -c mosek mosek>=8.0.81
 # CVXPY - DCP Interface
