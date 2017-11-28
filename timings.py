@@ -46,6 +46,8 @@ def main():
     '''
     Run once before to avoid initialization timings in the benchmark
     '''
+    # Set the seed (same for OEI and QEI)
+    np.random.seed(123)
     options['batch_size'] = 2
     X0 = BO.random_sample(options['objective'].bounds, options['initial_size'])
     y0 = options['objective'].f(X0)
