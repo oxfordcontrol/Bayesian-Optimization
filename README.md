@@ -35,7 +35,7 @@ To compare the timing of `OEI` as compared to `QEI` run
 ```
 python timings.py
 ```
-This compares the average time computing time for `OEI` and `QEI` (and their gradients) when performing Bayesian Optimization on a standard 5d optimization function (`alpine1`).
+This compares the average time computing time for `OEI` and `QEI` (and their gradients) when performing Bayesian Optimization on a standard 6d optimization function (`log-Hartmann-6d`).
 
 ## Multipoint Expected Improvement Accuracy
 The `R` script `methods/qEI_problem.R` demonstrates cases where the accuracy of `qEI` is arbitrarily wrong (remark of last paragraph of section 3 of the [paper](https://arxiv.org/abs/1707.04191v2) **(version 2 on arXiv)**).
