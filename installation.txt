@@ -4,11 +4,11 @@
 # SDP Solvers
 # SCS v.2
 # DO RECOMPILE - it can make a big difference in performance. 
-pip install scs>=2.0.1 --no-binary :all:
+pip install 'scs>=2.0.1' --no-binary :all:
 # MOSEK 8.0.81 or higher
 conda install -c mosek mosek>=8.0.81
-# CVXPY - DCP Interface
-pip install "cvxpy>=0.4.11,<1"
+# CVXPY 1.0 - DCP Interface
+Install from source (https://github.com/cvxgrp/cvxpy/tree/1.0)
 # Test solvers
 conda install nose
 nosetests cvxpy
@@ -28,7 +28,7 @@ pip install .
 
 # Library for QEI
 # Conda's rpy2 and R's (modified) DiceOptim
-conda install -c r rpy2>=2.8.5
+conda install -c r 'rpy2>=2.8.5'
 # Install modified DiceOptim version
 # https://github.com/nrontsis/DiceOptim/tree/643c7f66a78f4276239125e8a4f5872bd5c30e67
 # (Run: install.packages('devtools') library('devtools') build(./)

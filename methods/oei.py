@@ -120,7 +120,7 @@ class OEI(BO):
 
         The dual formulation is used, as this appears to be faster:
 
-        minimize \sum_{i=0}^{k} <Y_i, C_i> - eta
+        minimize \sum_{i=0}^{k} <Y_i, C_i>
         s.t.     Y_i positive semidefinite for all i = 0...k
                  \sum_{i=0}^{k} Y_i = \Omega
         '''
@@ -130,15 +130,15 @@ class OEI(BO):
         C = []
 
         C.append(np.zeros((k + 1, k + 1)))
-        C[0][-1, -1] = eta
-        Y.append(cvx.Semidef(k+1))
+        Y.append(cvx.Variable((k+1, k+1), PSD=True))
         cost_sum = Y[0]*C[0]
 
         for i in range(1, k + 1):
-            Y.append(cvx.Semidef(k+1))
+            Y.append(cvx.Variable((k+1, k+1), PSD=True))
             C.append(np.zeros((k + 1, k + 1)))
             C[i][-1, i - 1] = 1/2
             C[i][i - 1, -1] = 1/2
+            C[i][-1, -1] = -eta
             cost_sum += Y[i]*C[i]
 
         constraints = [sum(Y) == Omega]
@@ -170,7 +170,7 @@ class OEI(BO):
 
         The dual formulation is used, as this appears to be faster:
 
-        minimize \sum_{i=0}^{k} <Y_i, C_i> - eta
+        minimize \sum_{i=0}^{k} <Y_i, C_i>
         s.t.     Y_i positive semidefinite for all i = 0...k
                  \sum_{i=0}^{k} Y_i = \Omega
         '''
@@ -180,7 +180,6 @@ class OEI(BO):
         b = np.array([])
 
         C_i = np.zeros((k, k))
-        C_i[-1, -1] = 0
 
         b = np.append(b, self.pack(C_i, k))
 
@@ -226,8 +225,6 @@ class OEI(BO):
                     's': self.s_list[idx]}  # Warm start
         cone = {'s': [k]*k}
 
-        # sol = scs.solve(data, cone, use_indirect=True, eps=1e-4,
-        #                 max_iters=10000, verbose=False)
         sol = scs.solve(data, cone, eps=1e-3, max_iters=2500, verbose=False)
 
         if sol['info']['status'] != 'Solved':
