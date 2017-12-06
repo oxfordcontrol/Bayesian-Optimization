@@ -1,20 +1,18 @@
 # Anaconda 4.3.23
 # It is recommended to install on a new environment
 
-# SDP Solvers
-# SCS v.2
-# DO RECOMPILE - it can make a big difference in performance. 
-pip install 'scs>=2.0.1' --no-binary :all:
-# MOSEK 8.0.81 or higher
-conda install -c mosek mosek>=8.0.81
 # CVXPY 1.0 - DCP Interface
-Install from source (https://github.com/cvxgrp/cvxpy/tree/1.0)
+conda install -c cvxgrp 'cvxpy<1.0'
+# SDP Solvers
+# Update SCS to v.2
+# DO RECOMPILE - it can make a big difference in performance. 
+pip install 'scs>=2.0.2' --no-binary :all:
+# MOSEK 8.1.33 or higher
+# Requires license in ~/mosek/mosek.lic
+conda install -c mosek mosek=8.1.33
 # Test solvers
 conda install nose
 nosetests cvxpy
-# MOSEK 8.1.33 or higher
-conda install -c mosek mosek=8.1.33
-# Requires license in ~/mosek/mosek.lic
 
 # Basic libraries
 conda install numpy scipy matplotlib
@@ -29,6 +27,8 @@ pip install .
 # Library for QEI
 # Conda's rpy2 and R's (modified) DiceOptim
 conda install -c r 'rpy2>=2.8.5'
+# You might need to install the following compilers
+conda install clang_osx-64 clangxx_osx-64 gfortran_osx-64
 # Install modified DiceOptim version
 # https://github.com/nrontsis/DiceOptim/tree/643c7f66a78f4276239125e8a4f5872bd5c30e67
 # (Run: install.packages('devtools') library('devtools') build(./)
