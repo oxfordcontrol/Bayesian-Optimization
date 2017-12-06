@@ -167,50 +167,41 @@ class OEI(BO):
         Outpus:
             opt_val: Optimal value of the SDP
             M: Optimizer of the SDP
-
         The dual formulation is used, as this appears to be faster:
-
-        minimize \sum_{i=0}^{k} <Y_i, C_i>
+        minimize \sum_{i=0}^{k} <Y_i, C_i> - eta
         s.t.     Y_i positive semidefinite for all i = 0...k
-                 \sum_{i=0}^{k} Y_i = \Omega
+                    \sum_{i=0}^{k} Y_i = \Omega
         '''
-        k = Omega.shape[0]
+        k_ = Omega.shape[0]  # abbreviation: k_ = k + 1
 
-        # Calculation of b
+        c = -self.pack(Omega, k_)
+        # Create b
         b = np.array([])
+        C = []
+        C.append(np.zeros((k_, k_)))
+        b = np.append(b, self.pack(C[0], k_))
+        for i in range(1, k_):
+            C.append(np.zeros((k_, k_)))
+            C[i][-1, i - 1] = 1/2
+            C[i][i - 1, -1] = 1/2
+            C[i][-1, -1] = -eta
+            b = np.append(b, self.pack(C[i], k_))
 
-        C_i = np.zeros((k, k))
-
-        b = np.append(b, self.pack(C_i, k))
-
-        for i in range(1, k):
-            C_i = np.zeros((k, k))
-            C_i[-1, i - 1] = 1/2
-            C_i[i - 1, -1] = 1/2
-            C_i[i - 1, -1] = -eta
-
-            b = np.append(b, self.pack(C_i, k))
-
-        # Calculation of c
-        c = -self.pack(Omega, k)
-
-        # Calculation of A
-        n = k * (k + 1) // 2
-        A = np.zeros((k*n, n))
+        # Create A
+        n = k_ * (k_ + 1) // 2
+        A = np.zeros((k_*n, n))
         row_ind = np.array([])
         col_ind = np.array([])
-        y = np.array([])
+        z = np.array([])
         for i in range(n):
-            row_ind = np.append(row_ind, np.arange(i, k*n, n))
-            col_ind = np.append(col_ind, np.repeat(i, k))
-            y = np.append(y, np.repeat(1, k))
-        A = sp.sparse.csc_matrix((y, (row_ind, col_ind)), shape=(k*n, n))
+            row_ind = np.append(row_ind, np.arange(i, k_*n, n))
+            col_ind = np.append(col_ind, np.repeat(i, k_))
+            z = np.append(z, np.repeat(1, k_))
+        A = sp.sparse.csc_matrix((z, (row_ind, col_ind)), shape=(k_*n, n))
 
-        # Gather data
-        if len(self.Omega_list) == 0:
-            data = {'A': A, 'b': b, 'c': c}
-        else:
-            # Find nearest neighbour
+        if len(self.Omega_list) > 0:
+            # Warm starting - do not recalculate the problem data again
+            # Find nearest neighbour solution
             def sort_func(X):
                 return np.linalg.norm(X - Omega)
             Omega_min = min(self.Omega_list, key=sort_func)
@@ -222,22 +213,34 @@ class OEI(BO):
 
             data = {'A': A, 'b': b, 'c': c,
                     'x': self.x_list[idx], 'y': self.y_list[idx],
-                    's': self.s_list[idx]}  # Warm start
-        cone = {'s': [k]*k}
+                    's': self.s_list[idx]}
+        else:
+            # No warm starting
+            data = {'A': A, 'b': b, 'c': c}
 
-        sol = scs.solve(data, cone, eps=1e-3, max_iters=2500, verbose=False)
+        cone = {'s': [k_]*k_}
 
-        if sol['info']['status'] != 'Solved':
-            print('Solver: solution status ', sol['info']['status'])
-
+        sol = scs.solve(data, cone, eps=1e-5, verbose=False)
         # Save solution for warm starting
         self.Omega_list.append(Omega)
         self.x_list.append(sol['x'])
         self.y_list.append(sol['y'])
         self.s_list.append(sol['s'])
 
+        if sol['info']['status'] != 'Solved':
+            print('Solver: solution status ', sol['info']['status'])
+
         opt_val = -(sol['info']['pobj'] + sol['info']['dobj'])/2
-        M = self.unpack(sol['x'], k)
+        M = self.unpack(sol['x'], k_)
+        '''
+        # Dual variables
+        Y = []
+        for i in range(k_):
+            n = k_ * (k_ + 1) // 2
+            Y.append(
+                self.unpack(sol['y'][i*n:(i+1)*n], k_)
+            )
+        '''
 
         return np.asarray([opt_val]), M
 
