@@ -1,9 +1,13 @@
+from __future__ import print_function
 from .bo import BO
 import GPyOpt
 import numpy as np
 import tensorflow as tf
 import random
 import copy
+import logging
+import os
+import yaml
 
 
 class LP_EI(BO):
@@ -33,7 +37,12 @@ class LP_EI(BO):
     def bayesian_optimization(self):
         objective = copy.copy(self.options['objective'])
         X0 = self.random_sample(self.bounds, self.initial_size)
-        y0 = objective.f(X0)
+        X0 = np.concatenate((X0, X0[0:self.options['init_replicates']]))
+        ret = objective.f(X0)
+        if isinstance(ret, tuple):
+            y0, X0 = ret
+        else:
+            y0 = ret
 
         domain = list()
         for i in range(self.bounds.shape[0]):
@@ -81,6 +90,46 @@ class LP_EI(BO):
 
         # Run the optimization
         bo.run_optimization(max_iter=self.iterations)
+
+        # Logging
+        if 'seed' in self.options:
+            self.log_folder = 'log/' + self.options['job_name'] + '/' + \
+                str(self.options['seed']) + '/'
+        else:
+            self.log_folder = 'log/' + self.options['job_name'] + '/'
+        try:
+            os.makedirs(self.log_folder)
+        except OSError:
+            pass
+        # Load config file
+        with open('logging.yaml', 'r') as f:
+            config = f.read()
+        # Prepend logging folder
+        config = config.replace('PATH/', self.log_folder)
+        # Setup logging
+        logging.config.dictConfig(yaml.load(config))
+        logger = logging.getLogger('evals')
+        logger.info('----------------------------')
+        logger.info('Bounds:\n' + str(self.bounds))
+        if hasattr(objective, 'fmin'):
+            logger.info('Minimum value:' + str(objective.fmin))
+        logger.info('----------------------------')
+        X_ = np.asarray(bo.X).copy()
+        Y_ = np.asarray(bo.Y).copy()
+
+        for i in range(self.initial_size):
+            logging.getLogger('evals').info(
+                'X:' + str(X_[i, :]) + ' y: ' + str(Y_[i, :])
+            )
+        for i in range(self.iterations):
+            logging.getLogger('').info(
+                '#Iteration:' + str(i + 1)
+            )
+            for j in range(self.batch_size):
+                index = self.initial_size + i*self.batch_size + j
+                logging.getLogger('evals').info(
+                    'X:' + str(X_[index, :]) + ' y: ' + str(Y_[index, :])
+                )
 
         return np.asarray(bo.X), np.asarray(bo.Y)
 

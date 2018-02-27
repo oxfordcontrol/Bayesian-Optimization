@@ -14,10 +14,13 @@ The `methods` folder contains most of the source code. It implements the followi
 
 Each of these is based on the parent class `BO` (`bo.py`) that implements a simple parametrizable Bayesian Optimization setup.
 
-The `out` folder is where the output of each run is saved, while the `results` folder is where the final figures are produced. The `test_functions` folder defines synthetic functions that are used as benchmarks for the algorithms.
+The `out` folder is where the output of each run is saved, while the `results` folder is where the final figures are produced. The `test_functions` folder defines synthetic & real world functions that are used as benchmarks for the algorithms.
 
-## Reproduce the results of the papers
-The results of the [paper](https://arxiv.org/abs/1707.04191) can be reproduced by running the script `run_me.sh`, which saves a number of figures in the `results` folder. This script calls internally `gp_posteriors.py`, `plot_ei_vs_batch.py`, `run.py` and `plot_experiments.py`.
+## Running BO on test functions
+Invoke as the following example:
+```
+python run.py --algorithm=OEI --function=hart6 --batch_size=10 --initial_size=10 --iterations=20
+```
 
 ## Timing results
 To compare the timing of `OEI` as compared to `QEI` refer to the [GPy implementation](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPy-based), as this avoids the overhead associated with `TensorFlow`.

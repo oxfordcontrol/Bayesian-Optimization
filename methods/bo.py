@@ -1,3 +1,4 @@
+from __future__ import print_function
 from gpflow.gpr import GPR
 import numpy as np
 import tensorflow as tf
@@ -66,7 +67,12 @@ class BO(GPR):
         # Copy the objective. This is essential when testing draws from GPs
         objective = copy.copy(self.options['objective'])
         X0 = self.random_sample(self.bounds, self.initial_size)
-        y0 = objective.f(X0)
+        X0 = np.concatenate((X0, X0[0:self.options['init_replicates']]))
+        ret = objective.f(X0)
+        if isinstance(ret, tuple):
+            y0, X0 = ret
+        else:
+            y0 = ret
 
         # Set the data to the GP model
         # Careful, we might normalize the function evaluations
@@ -106,7 +112,11 @@ class BO(GPR):
 
             # Evaluate the black-box function at the suggested points
             X_new = self.get_suggestion(self.batch_size)
-            y_new = objective.f(X_new)
+            ret = objective.f(X_new)
+            if isinstance(ret, tuple):
+                y_new, X_new = ret
+            else:
+                y_new = ret
 
             for i in range(len(X_new)):
                 logging.getLogger('evals').info(
@@ -128,52 +138,54 @@ class BO(GPR):
         return X_all, y_all
 
     def get_suggestion(self, batch_size):
-        X = None    # Will hold the final choice
-        y = None    # Will hold the expected improvement of the final choice
+        X_final = np.zeros((0, self.dim))  # Will hold the final choice
+        # The batch is built point by point to make the work of L-BFGS-B easier.
+        for i in range(batch_size):
+            X = None    # Will hold the chosen points among the different L-BFGS-B restarts
+            y = None    # Will hold the acquisition function value at X
+            # Tile bounds to match batch size
+            bounds_tiled = np.tile(self.bounds, (i+1, 1))
+            # Run local gradient-descent optimizer multiple times
+            # to avoid getting stuck in a poor local optimum
+            for j in range(self.options['opt_restarts']):
+                try:
+                    # Initial point of the optimization
+                    X_init = np.concatenate((
+                        X_final, self.random_sample(self.bounds, 1)
+                    ))
+                    y_init = self.acquisition(X_init)[0]
 
-        # Tile bounds to match batch size
-        bounds_tiled = np.tile(self.bounds, (batch_size, 1))
+                    X0, y0, status = solve(X_init=X_init,
+                                           bounds=bounds_tiled,
+                                           hessian=self.hessian,
+                                           bo=self,
+                                           solver=self.options['nl_solver'])
 
-        # Run local gradient-descent optimizer multiple times
-        # to avoid getting stuck in a poor local optimum
-        for j in range(self.options['opt_restarts']):
-            try:
-                # Initial point of the optimization
-                X_init = self.random_sample(self.bounds, batch_size)
-                y_init = self.acquisition(X_init)[0]
+                    # Update X if the current local minimum is
+                    # the best one found so far
+                    if X is None or y0 < y:
+                        X, y = X0, y0
 
-                X0, y0, status = solve(X_init=X_init,
-                                       bounds=bounds_tiled,
-                                       hessian=self.hessian,
-                                       bo=self,
-                                       solver=self.options['nl_solver'])
-
-                # Update X if the current local minimum is
-                # the best one found so far
-                if X is None or y0 < y:
-                    X, y = X0, y0
-
-                # print('Opt_it:', j)
-
-                logging.getLogger('opt').info(
-                    '##Opt_it:' + str(j + 1) + ' Val:' + '%.2e' % y0 +
-                    ' Diff:' + '%.2e' % (y_init - y0) +
-                    ' It:' + str(status.nit)
-                )
-                if not status.success:
-                    logging.getLogger('opt').warning(
-                        'NL opt not successful. Message:' + str(status.message)
+                    logging.getLogger('opt').info(
+                        '##Opt_it:' + str(j + 1) + ' Val:' + '%.2e' % y0 +
+                        ' Diff:' + '%.2e' % (y_init - y0) +
+                        ' It:' + str(status.nit)
                     )
-            except KeyboardInterrupt:
-                raise
-            except:
-                logging.getLogger('opt').warning(
-                    'Optimization #' + str(j) +
-                    'of the acquisition function failed!'
-                )
+                    if not status.success:
+                        logging.getLogger('opt').warning(
+                            'NL opt not successful. Message:' + str(status.message)
+                        )
+                except KeyboardInterrupt:
+                    raise
+                except:
+                    logging.getLogger('opt').warning(
+                        'Optimization #' + str(j) +
+                        'of the acquisition function failed!'
+                    )
 
-        # Assert that at least one optimization run succesfully
-        assert X is not None
+            # Assert that at least one optimization run succesfully
+            assert X is not None
+            X_final = X
 
         return X
 

@@ -22,7 +22,7 @@
   return(output$sd^2)
 }
 
-`create_model` <- function(x_all, y_all, covtype, cov_param, cov_var, var){
+`create_model` <- function(x_all, y_all, covtype, cov_param, cov_var, var, noise_fixed, ard){
   # The Gaussian kernel (RBF in GPy) is the only kernel that matches to the GPy
   # This is due to DiceKriging using l-1 distance
   # See "CovFuns.c" in DiceKriging source and
@@ -30,17 +30,44 @@
   # DiceKriging, DiceOptim: Two R Packages for the Analysis of Computer
   # Experiments by Kriging-Based Metamodeling and Optimization
 
-  stopifnot(covtype=='gauss')
-
-  design <- data.frame(x_all)
-  m <- km(design=design,
-          response=data.frame(y_all),
-          coef.trend=0,
-          coef.cov=c(cov_param),
-          coef.var=c(cov_var),
-          noise.var=rep(var,1,nrow(x_all)),
-          covtype=covtype
-  )
+  if (covtype=='gauss') { 
+    design <- data.frame(x_all)
+    m <- km(design=design,
+            response=data.frame(y_all),
+            coef.trend=0,
+            coef.cov=c(cov_param),
+            coef.var=c(cov_var),
+            noise.var=rep(var,1,nrow(x_all)),
+            covtype=covtype
+    )
+  } else if (covtype=='matern5_2'|| covtype=='matern3_2') {
+    # The definition of 'matern5_2' is diffent than the one in GPy and GPflow
+    # hence, restimate the parameters
+    if (noise_fixed) {
+      # Fixed noise case
+      design <- data.frame(x_all)
+      m <- km(design=design,
+              response=data.frame(y_all),
+              coef.trend=0,
+              covtype=covtype,
+              noise.var=rep(var,1,nrow(x_all)),
+              iso=ard
+      )
+    }
+    else{
+      # Noise not fixed - estimate it
+      design <- data.frame(x_all)
+      m <- km(design=design,
+              response=data.frame(y_all),
+              coef.trend=0,
+              covtype=covtype,
+              nugget.estim=TRUE,
+              iso=ard
+      )
+    }
+  } else {
+    stopifnot(FALSE)
+  }
 
   return(m)
 }

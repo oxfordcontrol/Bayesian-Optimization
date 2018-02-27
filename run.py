@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import numpy as np
 import tensorflow as tf
@@ -9,8 +10,9 @@ import GPyOpt
 import methods
 import time
 import pickle
-from test_functions import hart6, loghart6, scale_function
+from test_functions import benchmark_functions, scale_function
 import copy
+from kernel import NN, SafeMatern52, SafeMatern32
 
 algorithms = {
     'OEI': methods.OEI,
@@ -69,15 +71,21 @@ def create_options(args):
         'branin': GPyOpt.objective_examples.experiments2d.branin(),
         'cosines': GPyOpt.objective_examples.experiments2d.cosines(),
         'sixhumpcamel': GPyOpt.objective_examples.experiments2d.sixhumpcamel(),
+        'eggholder': GPyOpt.objective_examples.experiments2d.eggholder(),
         'alpine1': GPyOpt.objective_examples.experimentsNd.alpine1(input_dim=5),
-        'hart6': hart6(),
-        'loghart6': loghart6()
+        'hart6': benchmark_functions.hart6(),
+        'loghart6': benchmark_functions.loghart6(),
+        'RoboschoolHopper-v1': benchmark_functions.ppo(experiment='RoboschoolHopper-v1'),
+        'RoboschoolInvertedDoublePendulum-v1': benchmark_functions.ppo(experiment='RoboschoolInvertedDoublePendulum-v1'),
+        'RoboschoolInvertedPendulumSwingup-v1': benchmark_functions.ppo(experiment='RoboschoolInvertedPendulumSwingup-v1'),
+        'RoboschoolInvertedPendulum-v1': benchmark_functions.ppo(experiment='RoboschoolInvertedPendulum-v1'),
+        'RoboschoolReacher-v1': benchmark_functions.ppo(experiment='RoboschoolReacher-v1'),
     }
 
     kernels_gpflow = {
         'RBF': gpflow.kernels.RBF,
-        'Matern32': gpflow.kernels.Matern32,
-        'Matern52': gpflow.kernels.Matern52
+        'Matern32': SafeMatern32,
+        'Matern52': SafeMatern52
     }
 
     kernels_gpy = {
@@ -93,12 +101,21 @@ def create_options(args):
 
     input_dim = options['objective'].bounds.shape[0]
     if options['algorithm'] != 'LP_EI':
-        options['kernel'] = kernels_gpflow[options['kernel']](
-            input_dim=input_dim, ARD=options['ard']
-        )
+        k1 = kernels_gpflow[options['kernel']](
+            input_dim=input_dim, ARD=options['ard'])
+        k1_ = kernels_gpflow[options['kernel']](
+            input_dim=input_dim, ARD=options['ard'])
         if options['priors']:
-            options['kernel'].lengthscales.prior = gpflow.priors.Gamma(shape=2, scale=0.5)
-            options['kernel'].variance.prior = gpflow.priors.Gaussian(mu=1, var=1)
+            k1.lengthscales.prior = gpflow.priors.Gamma(shape=2, scale=0.5)
+            k1.variance.prior = gpflow.priors.Gaussian(mu=1, var=2)
+            k1_.lengthscales.prior = gpflow.priors.Gamma(shape=2, scale=0.5)
+            k1_.variance.prior = gpflow.priors.Gaussian(mu=1, var=2)
+        if options['NN'] == 0:
+            options['kernel'] = k1
+        else:
+            k2 = NN(input_dim=input_dim, ARD=True) # options['ard'])
+            options['kernel'] = k1 + k2
+
         if options['samples'] > 0:
             assert options['priors']
     else:
@@ -107,6 +124,8 @@ def create_options(args):
         )
 
     options['job_name'] = options['function'] + '_' + options['algorithm']
+    if options['NN']:
+        options['job_name'] = options['job_name'] + '-new'
 
     return options
 
@@ -121,12 +140,23 @@ def main(args):
         os.makedirs(save_folder)
     except OSError:
         pass
+
     try:
         os.remove(filepath)
     except OSError:
         pass
-    with open(filepath, 'wb') as file:
-        pickle.dump(args, file, pickle.HIGHEST_PROTOCOL)
+    try:
+        with open(filepath, 'wb') as file:
+            pickle.dump(args, file, pickle.HIGHEST_PROTOCOL)
+    except OSError:
+        pass
+
+    filepath = save_folder + 'fmin.txt'
+    try:
+        fmin = options['objective'].fmin
+    except AttributeError:
+        fmin = 0
+    np.savetxt(filepath, np.array([fmin]))
 
     for seed in range(args.seed, args.seed + args.num_seeds):
         run(options, seed=seed, save=options['save'])
@@ -146,14 +176,16 @@ def create_parser():
     parser.add_argument('--batch_size', type=int, default=5)
     parser.add_argument('--iterations', type=int, default=10)
     parser.add_argument('--initial_size', type=int, default=10)
+    parser.add_argument('--init_replicates', type=int, default=0)
     parser.add_argument('--model_restarts', type=int, default=20)
     parser.add_argument('--opt_restarts', type=int, default=20)
     parser.add_argument('--normalize_Y', type=int, default=1)
     parser.add_argument('--noise', type=float)
-    parser.add_argument('--kernel', default='RBF')
-    parser.add_argument('--ard', type=int, default=1)
+    parser.add_argument('--kernel', default='Matern32')
+    parser.add_argument('--ard', type=int, default=0)
     parser.add_argument('--nl_solver',  default='scipy')
     parser.add_argument('--hessian', type=int, default=0)
+    parser.add_argument('--NN', type=int, default=0)
 
     parser.add_argument('--beta_multiplier', type=float, default=.1)
     parser.add_argument('--delta', type=float, default=.1)

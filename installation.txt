@@ -1,24 +1,24 @@
-# Python, Anaconda: 3.6.2
+# Anaconda 5.0.1
+# It is recommended to install on a new environment
 
-conda install -c cvxgrp cvxpy=0.4.9
-conda install -c mosek mosek=8.0.81
-# Requires license in ~/mosek/mosek.lic
-pip install GPy=1.7.7
-pip install gitpython
-conda install numpy scipy matplotlib pyyaml
-
-# Install modified GPyOpt version
-# https://github.com/nrontsis/GPyOpt/tree/eb0206d1b61c187d224e33853807049a4f50ce11
-# (Run: pip install .)
-
-conda install -c r rpy2=2.8.5
-
-# Install modified DiceOptim version
-# https://github.com/nrontsis/DiceOptim/tree/643c7f66a78f4276239125e8a4f5872bd5c30e67
-# (Run: build(./) and install(./) from R, when inside DiceOptim's folder)
-
+conda install numpy scipy matplotlib pyyaml r
+pip install GPy==1.8.4 numdifftools
 pip install --upgrade tensorflow=1.3.0
 
-# gpflow==0.4.1
-# https://github.com/GPflow/GPflow/tree/69364c2b79e1e6dd0fe7419377a044c0bdedb4f5
-# (Run pip install .)
+pip install 'scs>=2.0.2' --no-binary :all:
+pip install 'cvxpy<1' --no-binary :all:
+conda install -c mosek mosek=8.1.33
+
+# Library for LP-EI
+# Install the following MODIFIED version of GPyOpt
+# https://github.com/nrontsis/GPyOpt/tree/697b950
+
+# Install MODIFIED DiceOptim version
+# https://github.com/nrontsis/DiceOptim/tree/643c7f6
+# (Run: install.packages('devtools') library('devtools') build(./)
+# and install(./) from R, when inside DiceOptim's folder)
+# You might need to install compilers in order to install DiceOptim
+# https://conda.io/docs/user-guide/tasks/build-packages/compiler-tools.html
+
+# gpflow
+https://github.com/GPflow/GPflow/releases/tag/0.5.0

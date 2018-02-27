@@ -1,10 +1,12 @@
+from __future__ import print_function
 import numpy as np
-import cvxpy as cvx
 from .bo import BO
 from gpflow.param import AutoFlow
 from gpflow._settings import settings
 import tensorflow as tf
+import scipy.linalg as la
 import logging
+from .sdps import sdp
 float_type = settings.dtypes.float_type
 
 
@@ -16,56 +18,54 @@ class OEI(BO):
     def __init__(self, options):
         super(OEI, self).__init__(options)
 
-    def acquisition(self, x):
+    def acquisition(self, x, fmin=None):
         '''
         The acquisition function, supporting sampling
         of the hyperparameters
         '''
-        k = x.size // self.dim
-        X = x.reshape(k, self.dim)
+        if fmin is None:
+            fmin = np.min(self.predict_f(self.X.value)[0])
 
-        logging.getLogger('opt').debug(
-            'X:' + str(X)
-        )
+        x = x.flatten()  # Make sure x is flat
 
         if self.options['samples'] == 0:
-            return self.acquisition_no_sample(x)
-        else:
-            N = self.samples.shape[0]
-            omegas = np.zeros((k+1, k+1, N))
-            for i, s in self.samples.iterrows():
-                self.set_parameter_dict(s)
-                omegas[:, :, i] = self.omega(X)
+            return self.acquisition_no_sample(x, fmin)
 
-            # Solve SDP only once
-            fmin = np.min(self.Y.value)
-            omega = np.mean(omegas, axis=2)
-            M = self.sdp(omega, fmin)[1]
+        X = x.reshape((-1, self.dim))
+        k = x.size // self.dim
 
-            # Calculate the solution 
-            objectives = np.zeros((N))
-            gradients = np.zeros((X.size, N))
-            for i, s in self.samples.iterrows():
-                self.set_parameter_dict(s)
-                objectives[i], gradients[:, i] = self.acquisition_tf(X, M)
+        N = self.samples.shape[0]
+        omegas = np.zeros((k+1, k+1, N))
+        for i, s in self.samples.iterrows():
+            self.set_parameter_dict(s)
+            omegas[:, :, i] = self.omega(X)
 
-            return np.asarray([np.mean(objectives, axis=0)]),\
-                np.mean(gradients, axis=1)
+        # Solve SDP only once
+        omega = np.mean(omegas, axis=2)
+        M = sdp(omega, fmin)[1]
 
-    def acquisition_no_sample(self, x):
+        # Calculate the solution
+        objectives = np.zeros((N))
+        gradients = np.zeros((x.size, N))
+        for i, s in self.samples.iterrows():
+            self.set_parameter_dict(s)
+            objectives[i], gradients[:, i] = self.acquisition_tf(X, M)
+
+        return np.asarray([np.mean(objectives, axis=0)]),\
+            np.mean(gradients, axis=1)
+
+    def acquisition_no_sample(self, x, fmin=None):
         '''
         The acquisition function when no sampling
         of the hyperparameters is performed
         '''
-        k = x.size // self.dim
-        X = x.reshape(k, self.dim)
-        fmin = np.min(self.Y.value)
-        M = self.sdp(self.omega(X), fmin)[1]
+        if fmin is None:
+            fmin = np.min(self.predict_f(self.X.value)[0])
+
+        X = x.reshape((-1, self.dim))
+
+        M = sdp(self.omega(X), fmin)[1]
         obj, gradient = self.acquisition_tf(X, M)
-        logging.getLogger('opt').debug(
-            'a:' + str(obj) +
-            ' da/dX:' + str(gradient)
-        )
         return obj, gradient
 
     @AutoFlow((float_type, [None, None]), (float_type, [None, None]))
@@ -74,8 +74,7 @@ class OEI(BO):
         Calculates the acquisition function, given M the optimizer of the SDP.
         The calculation is simply a matrix inner product.
         '''
-        fmin = tf.reduce_min(self.Y)
-        f = tf.tensordot(self.omega_tf(X), M, axes=2) - fmin
+        f = tf.tensordot(self.omega_tf(X), M, axes=2)
         df = tf.gradients(f, X)[0]
         return tf.reshape(f, [-1]), tf.reshape(df, [-1])
 
@@ -83,7 +82,9 @@ class OEI(BO):
         '''
         Calculates the second order moment matrix in tensorflow.
         '''
-        mean, var = self.likelihood.predict_mean_and_var(*self.build_predict(X, full_cov=True))
+        mean, var = self.likelihood.predict_mean_and_var(
+            *self.build_predict(X, full_cov=True)
+        )
 
         # Create omega
         omega = var[:, :, 0] + tf.matmul(mean, mean, transpose_b=True)
@@ -102,70 +103,161 @@ class OEI(BO):
         return self.omega_tf(X)
 
     @staticmethod
-    def sdp(omega, fmin):
+    def P_(k):
+        A = np.zeros((0, k*(k+1)//2))
+        for i in range(k):
+            B = np.zeros((0, 0))
+            for j in range(i):
+                tmp = np.zeros((1, k - j))
+                tmp[0, -(k - i)] = 1
+                B = la.block_diag(B, tmp)
+
+            B = la.block_diag(B, np.eye(k - i))
+            B = np.hstack((B, np.zeros((k, k*(k+1)//2 - B.shape[1]))))
+
+            A = np.vstack((A, B))
+
+        return A
+
+    @staticmethod
+    def P(k):
+        A = np.zeros((0, 0))
+        I = np.eye(k)
+        for i in range(k):
+            A = la.block_diag(A, I[i:, :])
+
+        return A
+
+    @staticmethod
+    def solve(LU, C):
+        assert np.allclose(C, C.T)
+        n = C.shape[0]
+
+        c = np.zeros(len(LU[1]))
+        c[-n*(n+1)//2:] = C[np.triu_indices(n)]
+        x = la.lu_solve(LU, c)
+
+        def create_matrix(x):
+            A = np.zeros((n, n))
+            A[np.triu_indices(n)] = x[-n*(n+1)//2:]
+            A = A + A.T
+            A[np.diag_indices(n)] = A[np.diag_indices(n)]/2
+            return A
+
+        q = n*(n+1)//2
+        dY = []
+        for i in range(0, x.size - q, q):
+            dY.append(create_matrix(x[i:i+q]))
+
+        dM = create_matrix(x[-n*(n+1)//2:])
+
+        return dM, dY
+
+    def factor(self, omega):
+        k = omega.shape[0] - 1
+        # The acquisition function is simply the solution of an SDP
+        opt_val, M_, Y_, C_ = sdp(omega, np.min(self.Y.value))
+
+        # Calculate dM analytically
+        S_ = C_ - M_
+
+        P = self.P(k + 1)
+        P_ = self.P_(k + 1)
+
+        A1, A2 = None, None
+        for i in range(k + 1):
+            e, U = la.eigh(S_[i])
+            U = U.T
+            SS = np.kron((S_[i].dot(U)).T, U.T)
+            YY = np.kron(U.T, U.T.dot(Y_[i]))
+
+            if A1 is not None:
+                A1 = la.block_diag(A1, P.dot(SS).dot(P_))
+                A2 = np.vstack((A2, P.dot(YY).dot(P_)))
+            else:
+                A1 = P.dot(SS).dot(P_)
+                A2 = P.dot(YY).dot(P_)
+
+        A3 = np.tile(np.eye((k+1)*(k+2)//2), k+1)
+        A4 = np.zeros((A3.shape[0], A1.shape[1] + A2.shape[1] - A3.shape[1]))
+
+        A = np.vstack((
+            np.hstack((A1, -A2)),
+            np.hstack((A3, A4))
+        ))
+        # print('New Condition:', np.linalg.cond(A))
+
+        LU = la.lu_factor(A)
+
+        return LU
+
+    def acquisition_hessian(self, x):
         '''
-        Solves the SDP, the solution of which is the acquisiton function.
-        Inputs:
-            omega: Second order moment matrix
-            fmin: min value achieved so far, i.e. min(y0)
-        Outpus:
-            opt_val: Optimal value of the SDP
-            M: Solution of the SDP
-            Y: Dual Solution of the SDP
-            C: List of auxiliary matrices used in the cone constraints
-
-        The dual formulation is used, as this appears to be faster:
-
-        minimize \sum_{i=0}^{k} <Y_i, C_i> - fmin
-        s.t.     Y_i positive semidefinite for all i = 0...k
-                 \sum_{i=0}^{k} Y_i = \omega
+        The hessian of the acquisition function, supporting sampling
+        of the hyperparameters
         '''
-        k = omega.shape[1] - 1
+        assert self.options['samples'] == 0
 
-        Y = []
-        C = []
+        X = x.reshape((self.batch_size, -1))
 
-        C.append(np.zeros((k + 1, k + 1)))
-        C[0][-1, -1] = fmin
-        Y.append(cvx.Semidef(k+1))
-        cost_sum = Y[0]*C[0]
+        omega = self.omega(X)
+        fmin = np.min(self.Y.value)
+        M = sdp(omega, fmin)[1]
 
-        for i in range(1, k + 1):
-            Y.append(cvx.Semidef(k+1))
-            C.append(np.zeros((k + 1, k + 1)))
-            C[i][-1, i - 1] = 1/2
-            C[i][i - 1, -1] = 1/2
-            cost_sum += Y[i]*C[i]
+        LU = self.factor(omega)
 
-        constraints = [sum(Y) == omega]
+        domega = self.domega(X)
+        dM = np.zeros(M.shape + (x.size,))
+        # We could possibly get rid of (or compute in parallel) this for loop
+        for i in range(x.size):
+            dM[:, :, i], _ = self.solve(LU, domega[:, :, i])
 
-        objective = cvx.Minimize(cvx.trace(cost_sum))
+        return self.acquisition_hessian_tf(x, M, dM)
 
-        prob = cvx.Problem(objective, constraints)
-        # Use only one thread for MOSEK
-        params = {'MSK_IPAR_NUM_THREADS': 1}
-        opt_val = prob.solve(solver=cvx.MOSEK, verbose=False,
-                             mosek_params=params) - fmin
+    @AutoFlow((float_type, [None]), (float_type, [None, None]),
+              (float_type, [None, None, None]))
+    def acquisition_hessian_tf(self, x, M, dM):
+        X = tf.reshape(x, [self.options['batch_size'], -1])
+        f = tf.tensordot(self.omega_tf(X), M, axes=2)
+        d2f_a = tf.hessians(f, x)[0]
 
-        # Assert a valid solution is returned
-        assert (isinstance(opt_val, np.ndarray) or isinstance(opt_val, float))\
-            and np.isfinite(opt_val)
-        
-        M = -constraints[0].dual_value
-        M = np.asarray((M + M.T)/2)  # From matrix to array
+        d2f_b = tf.tensordot(tf.transpose(dM), self.domega_tf(X), axes=2)
 
-        Y_return = []
-        for y in Y:
-            Y_return.append(np.asarray(y.value))
+        return d2f_a + d2f_b
 
-        logging.getLogger('opt').debug(
-            'omega:' + str(omega)
-        )
+    def domega_tf(self, X):
+        omega = self.omega_tf(X)
+        domega_list = []
+        for i in range(self.options['batch_size'] + 1):
+            tmp_row = []
+            for j in range(self.options['batch_size'] + 1):
+                if i >= j:
+                    # If its an upper triangular element then
+                    # Calculate the gradients
+                    if i == j:
+                        # Scale the diagonal elements
+                        tmp_row.append(tf.reshape(
+                            tf.gradients(0.5*omega[i, j], X)[0],
+                            [-1]
+                        ))
+                    else:
+                        tmp_row.append(tf.reshape(
+                            tf.gradients(omega[i, j], X)[0],
+                            [-1]
+                        ))
+                else:
+                    # Otherwise, set them to zero
+                    tmp_row.append(0*tmp_row[0])
 
-        if prob.status != 'optimal':
-            logging.getLogger('opt').warning(
-                'SDP:' + str(prob.status) + ' It:' +
-                str(prob.solver_stats.num_iters)
-            )
+            domega_list.append(tmp_row)
+        # Convert to tensor
+        domega = tf.stack(domega_list)
+        # Calculate the final tensor
+        # (until now the lower triangular elements were zero)
+        domega = domega + tf.transpose(domega, [1, 0, 2])
 
-        return opt_val, M, Y_return, C
+        return domega
+
+    @AutoFlow((float_type, [None, None]))
+    def domega(self, X):
+        return self.domega_tf(X)

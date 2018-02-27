@@ -1,9 +1,12 @@
+from __future__ import print_function
 from .bo import BO
 import numpy as np
 from gpflow.param import AutoFlow
 from gpflow._settings import settings
 import tensorflow as tf
 float_type = settings.dtypes.float_type
+
+BATCH_SIZE = -1
 
 
 class QEI_CL(BO):
@@ -16,6 +19,8 @@ class QEI_CL(BO):
     Kriging Is Well-Suited to Parallelize Optimization.
     '''
     def __init__(self, options):
+        global BATCH_SIZE
+        BATCH_SIZE = options['batch_size']
         super(QEI_CL, self).__init__(options)
         # The options dictionary should include the entry 'liar_choice'
         # Its value should be 'min', 'max' or 'mean'
@@ -23,12 +28,21 @@ class QEI_CL(BO):
 
     @AutoFlow((float_type, [None, None]))
     def acquisition_tf(self, X):
-        fmin = tf.reduce_min(self.Y)
+        fmin = tf.reduce_min(self.build_predict(self.X)[0])
         mean, var = self.likelihood.predict_mean_and_var(*self.build_predict(X)) 
         normal = tf.contrib.distributions.Normal(mean, tf.sqrt(var))
         f = -(fmin - mean) * normal.cdf(fmin) - var * normal.prob(fmin)
         df = tf.gradients(f, X)[0]
         return tf.reshape(f, [-1]), tf.reshape(df, [-1])
+
+    @AutoFlow((float_type, [None]))
+    def acquisition_hessian(self, x):
+        X = tf.reshape(x, [BATCH_SIZE, -1])
+        fmin = tf.reduce_min(self.build_predict(self.X)[0])
+        mean, var = self.likelihood.predict_mean_and_var(*self.build_predict(X)) 
+        normal = tf.contrib.distributions.Normal(mean, tf.sqrt(var))
+        f = -(fmin - mean) * normal.cdf(fmin) - var * normal.prob(fmin)
+        return tf.hessians(f, x)[0]
 
     def get_suggestion(self, batch_size):
         if self.liar_choice == 'min':

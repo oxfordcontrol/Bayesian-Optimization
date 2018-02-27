@@ -1,10 +1,23 @@
 import os.path
 import glob
 import numpy as np
-import git
 import pickle
 import argparse
+import matplotlib
+
+SMALL_SIZE = 8
+MEDIUM_SIZE = 10
+BIGGER_SIZE = 12
+
+matplotlib.rc('font', size=SMALL_SIZE)          # controls default text sizes
+matplotlib.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+matplotlib.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+matplotlib.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+matplotlib.rc('figure', titlesize=SMALL_SIZE)  # fontsize of the figure title
+
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 # When no X server is present
 plt.switch_backend('agg')
 
@@ -24,16 +37,25 @@ def plot_mins(mins, options, color='b', fig=None, ax=None, label=None, offset=0)
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
-    ax.errorbar(np.arange(0, mins.shape[1]) + offset,
-                np.mean(mins, axis=0), yerr=np.std(mins, axis=0),
-                capsize=0, ecolor=color, label=label, fmt='k.',
-                linewidth=options.linewidth, ms=options.capsize)
-    ax.legend()
+    ax.ticklabel_format(style='sci', scilimits=(0, 1.5))
+    for i in range(0, mins.shape[1], options.step):
+        ax.scatter(i + 0*mins[:, i] + offset, mins[:, i],
+                   s=50, marker='.', color=color, edgecolor='none',
+                   alpha=0.3)
+        ax.scatter(i + offset, np.median(mins[:, i]),
+                   s=20, marker='d', color=color, edgecolor=(0, 0, 0))
+
+    # ax.legend().get_frame().set_facecolor('none')
+    # plt.legend(frameon=False)
+    max_plotted_value = np.max(np.percentile(mins, 100, axis=0))
+    if options.regret:
+        ax.set_ylim(0, 1.05*max_plotted_value)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
     return fig, ax
 
 
-def plot(outputs, iterations, initial_size, batch_size, label, options,
+def plot(outputs, fmin, iterations, initial_size, batch_size, label, options,
          color='b', fig=None, ax=None, output_idx=0, offset=0):
     '''
     Plot error bars for the minimum achieved at each iteration of the BO
@@ -54,7 +76,7 @@ def plot(outputs, iterations, initial_size, batch_size, label, options,
     for i in range(n):
         for j in range(iterations + 1):
             idx = np.argmin(outputs[i][0:initial_size + j*batch_size, 0])
-            mins[i, j] = outputs[i][idx, output_idx]
+            mins[i, j] = outputs[i][idx, output_idx] - fmin
 
     fig, ax = plot_mins(mins, options, color, fig, ax, label, offset)
 
@@ -63,7 +85,7 @@ def plot(outputs, iterations, initial_size, batch_size, label, options,
 
 def plot_experiments(options):
     # Hopefully we won't plot more than 6 different algorithms at the same plot
-    colors = ['r', 'g', 'b', 'y', 'c', 'm']
+    colors = ['r', 'b', 'g', 'y', 'b', 'm']
     fig = None
     ax = None
     offset = options.offset_start
@@ -73,6 +95,7 @@ def plot_experiments(options):
         with open(folder + '/arguments.pkl', 'rb') as file:
                 args = pickle.load(file)
         # print(args)
+        fmin = np.loadtxt(folder + '/fmin.txt')
 
         fails = 0
         outputs = []
@@ -98,25 +121,32 @@ def plot_experiments(options):
             color = colors[k]
 
         fig, ax = plot(outputs=outputs,
+                       fmin=fmin,
                        iterations=args.iterations,
-                       initial_size=args.initial_size,
+                       initial_size=args.initial_size, # + args.init_replicates,
                        batch_size=args.batch_size,
                        color=color, fig=fig,
                        ax=ax, label=label,
                        offset=offset, options=options)
         offset += options.offset_delta
 
-    repo = git.Repo(search_parent_directories=True)
-    sha = repo.head.object.hexsha[0:7]
     ax.set_xlabel('Number of Batches')
-    ax.set_ylabel('Min Function Value')
+    if options.regret:
+        ax.set_ylabel('Regret')
+    else:
+        ax.set_ylabel('Loss')
     ax.set_title(options.name[0])
     figure = ax.get_figure()
     figure.set_size_inches((options.sizex, options.sizey))
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+    ax.locator_params(nbins=4, axis='y')
 
     # Save plot
     plt.tight_layout()
-    plt.savefig('results/' + options.name[0] + '_' + sha + '.pdf')
+    plt.savefig('results/' + options.name[0] + '.pdf')
 
 
 if __name__ == '__main__':
@@ -128,7 +158,9 @@ if __name__ == '__main__':
     parser.add_argument('--offset_start', type=float, default=-0.2)
     parser.add_argument('--offset_delta', type=float, default=0.1)
     parser.add_argument('--sizex', type=float, default=5)
-    parser.add_argument('--sizey', type=float, default=3)
+    parser.add_argument('--sizey', type=float, default=2.5)
+    parser.add_argument('--regret', type=int, default=1)
+    parser.add_argument('--step', type=int, default=1)
     args = parser.parse_args()
 
     plot_experiments(args)

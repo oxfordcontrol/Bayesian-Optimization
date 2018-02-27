@@ -1,3 +1,4 @@
+from __future__ import print_function
 from .bo import BO
 import numpy as np
 from gpflow.param import AutoFlow
@@ -49,7 +50,7 @@ class BLCB(BO):
             self.beta = 2 * self.beta_multiplier * \
                 np.log(self.dim * np.square(np.pi * (i + 1)) / 6 / self.delta)
 
-            X = super(BLCB, self).get_suggestion(batch_size=1)
+            X = BO.get_suggestion(self, batch_size=1)
 
             # Append i_th choice to the batch
             X_final = np.concatenate((X_final, X))
