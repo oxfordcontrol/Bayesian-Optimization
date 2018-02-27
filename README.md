@@ -19,7 +19,7 @@ The `out` folder is where the output of each run is saved, while the `results` f
 ## Running BO on test functions
 Invoke as the following example:
 ```
-python run.py --algorithm=OEI --function=hart6 --batch_size=10 --initial_size=10 --iterations=20
+python run.py --algorithm=OEI --function=hart6 --batch_size=10 --initial_size=10 --iterations=20 --noise=1e-6
 ```
 
 ## Timing results
