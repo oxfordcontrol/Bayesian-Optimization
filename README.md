@@ -1,7 +1,7 @@
 # Bayesian-Optimization
 This is the implementation of a new acquisition function for **Batch Bayesian Optimization**, named **Optimistic Expected Improvement (OEI)**. For details, results and theoretical analysis, refer to the paper titled *Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization* by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
 
-This is a **cleaned** and **updated** version of the [ICML](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/ICML) branch which includes code for testing against the following batch acquisition functions:
+This is a **cleaned** and **updated** version of the [GPflow-based](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPflow-based) branch which includes code for testing against the following batch acquisition functions:
 * Multipoint expected improvement (`qei.py`)
 * Multipoint expected improvement, Constant Liar Heuristic (`qei_cl.py`)
 * Batch Lower Confidence Bound (`blcb.py`)
@@ -9,7 +9,7 @@ This is a **cleaned** and **updated** version of the [ICML](https://github.com/o
 
 Refer to the above mentioned paper for references and more detailed descriptions.
 
-***Please use this branch for `OEI` as the one in the [ICML](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/ICML) branch is outdated.***
+***Please use this branch for `OEI` as the one in the [GPflow-based](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPflow-based) branch is outdated.***
 
 ## Installation
 This package was written in `Python 3.6`. It is recommended to use the `Anaconda >=5.0.1` distribution, on a empty environment. The package is built on top of `gpflow 0.5` which has to be installed from [source]( https://github.com/GPflow/GPflow/releases/tag/0.5.0).
