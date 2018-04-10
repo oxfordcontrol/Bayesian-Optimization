@@ -1,0 +1,23 @@
+# Saved numpy and binary data
+*.npz
+*.npy
+*.dat
+# Saved figures
+*.pdf
+# Pycache
+__pycache__
+# Output logs
+out.txt
+*.swp
+*.png
+.Rhistory
+log/**/
+out/**/
+*.zip
+*.tgz
+**.pkl
+get_results.sh
+**/.cache
+**/output*
+log**/
+evals**/

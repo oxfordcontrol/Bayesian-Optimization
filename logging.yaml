@@ -1,0 +1,45 @@
+version: 1
+formatters:
+  verbose:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  simple:
+    format: '%(name)s - %(levelname)s - %(message)s'
+  bare:
+    format: '%(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: CRITICAL
+    formatter: simple
+    stream: ext://sys.stdout
+  evals_file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: bare
+    filename: PATH/evals.log
+  opt_file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: bare
+    filename: PATH/opt.log
+  model_file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: bare
+    filename: PATH/model.log
+loggers:
+  evals:
+    level: INFO
+    handlers: [evals_file]
+    propagate: False
+  opt:
+    level: INFO
+    handlers: [opt_file]
+    propagate: False
+  model:
+    level: INFO
+    handlers: [model_file]
+    propagate: False
+root:
+  level: DEBUG
+  handlers: [console, evals_file, model_file, opt_file]
