@@ -1,5 +1,5 @@
 # Bayesian-Optimization
-This is the implementation of a new acquisition function for **Batch Bayesian Optimization**, named **Optimistic Expected Improvement (OEI)**. For details, results and theoretical analysis, refer to the paper titled *Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization* by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
+This is the implementation of a new acquisition function for **Batch Bayesian Optimization**, named **Optimistic Expected Improvement (OEI)**. For details, results and theoretical analysis, refer to the paper titled [*Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization*](https://arxiv.org/abs/1707.04191) by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
 
 This is a **cleaned** and **updated** version of the [GPflow-based](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPflow-based) branch which includes code for testing against the following batch acquisition functions:
 * Multipoint expected improvement (`qei.py`)
@@ -50,7 +50,7 @@ python plot.py hart6 out/hart6_OEI out/hart6_Random
 ```
 This will save a `pdf` plot in the `results` folder.
 
-The user can define a different function for optimization by modifying `benchmark_function.py`, or run **any of the ones presented in the paper**, the definitions of which can be found [here](TODO:add_link).
+The user can define a different function for optimization by modifying `benchmark_function.py`, or run **any of the ones presented in the [paper](https://arxiv.org/abs/1707.04191)**, the definitions of which can be found [here](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/GPflow-based/test_functions/benchmark_functions.py).
 
 ## Basic files
 
@@ -64,9 +64,9 @@ The user can define a different function for optimization by modifying `benchmar
 ## Timing results
 The main operations for the calculating value of `OEI`, its gradient and hessian are listed below:
 * Value and gradient
-    * Solving the Semidefinite Optimization Problem [TODO:Link code]().
-* Hessian: 
-    * Calculating the derivatives of the M [TODO:Link code]().
-    * Chain rules of tensorflow [TODO:Link code]().
+    * Solving the Semidefinite Optimization Problem [(relevant line)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/sdp.py#L49-L50).
+* Hessian (given solution of SDP): 
+    * Calculating the derivatives of M [(relevant line)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/sdp.py#L177) called from [here](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L57).
+    * Chain rules of tensorflow [(relevant line #1](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L56), [relevant line #2)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L60).
 
 In the current implementation a considerable amount of time is spent in Python to create, reshape and move matrices, all of which could have been avoided in a more efficient version.

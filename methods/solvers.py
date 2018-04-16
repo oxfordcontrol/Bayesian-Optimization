@@ -25,7 +25,7 @@ try:
     Knitro wrapper
     '''
     import sys
-    sys.path.insert(0, '../../Libraries/knitro/examples/Python')
+    sys.path.insert(0, './knitro/examples/Python')
     from knitro import *
     from knitroNumPy import *
     from collections import namedtuple

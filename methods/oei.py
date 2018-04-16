@@ -32,7 +32,7 @@ class OEI(BO):
         value, M_, _, _ = sdp(self.omega(X_), fmin, warm_start=(len(X)==len(X_)))
         M = V.T.dot(M_).dot(V)
         _, gradient = self.acquisition_tf(X, M)
-        return value, gradient
+        return np.array([value]), gradient
 
     def acquisition_hessian(self, x):
         '''

@@ -78,6 +78,8 @@ def create_options(args):
     options = vars(copy.copy(args))
     options['objective'] = functions[options['function']]
     options['objective'].bounds = np.asarray(options['objective'].bounds)
+    # This scales the input domain of the function to [-0.5, 0.5]^n. It's different to the
+    # normalize option, which scales the output of the function.
     options['objective'] = scale_function(options['objective'])
 
     input_dim = options['objective'].bounds.shape[0]
