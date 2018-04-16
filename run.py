@@ -95,6 +95,11 @@ def create_options(args):
     }
 
     options = vars(copy.copy(args))
+
+    if options['algorithm'] == 'OEI':
+        print('Please use master branch for OEI')
+        assert False
+
     options['objective'] = functions[options['function']]
     options['objective'].bounds = np.asarray(options['objective'].bounds)
     options['objective'] = scale_function(options['objective'])
@@ -165,7 +170,7 @@ def main(args):
 def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--function', default='branin')
-    parser.add_argument('--algorithm', default='OEI')
+    parser.add_argument('--algorithm', default='QEI')
     parser.add_argument('--seed', type=int, default=123)
     parser.add_argument('--num_seeds', type=int, default=1)
     parser.add_argument('--save', type=int, default=1)

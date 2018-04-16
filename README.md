@@ -1,6 +1,8 @@
 # Bayesian-Optimization
 A comparison framework for different batch acquisition functions. This is the code used to evaluate the performance of the new batch acquisition function, Optimistic Expected Improvement, against the state of the art in the [paper](https://arxiv.org/abs/1707.04191) *Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization* by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
 
+***Please use the master branch for `OEI` as this one is outdated and intended only for the other algorithms.***
+
 ## Installation
 This package was written in `Python 3.6` and uses the packages listed in `installation.txt`.
 
@@ -21,6 +23,3 @@ Invoke as the following example:
 ```
 python run.py --algorithm=OEI --function=hart6 --batch_size=10 --initial_size=10 --iterations=20 --noise=1e-6
 ```
-
-## Timing results
-To compare the timing of `OEI` as compared to `QEI` refer to the [GPy implementation](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPy-based), as this avoids the overhead associated with `TensorFlow`.

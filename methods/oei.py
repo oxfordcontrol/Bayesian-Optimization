@@ -16,6 +16,8 @@ class OEI(BO):
     *** THIS IS OUR NOVEL ACQUISITION FUNCTION ***
     '''
     def __init__(self, options):
+        print('Please use master branch for OEI')
+        assert False
         super(OEI, self).__init__(options)
 
     def acquisition(self, x, fmin=None):
@@ -82,9 +84,8 @@ class OEI(BO):
         '''
         Calculates the second order moment matrix in tensorflow.
         '''
-        mean, var = self.likelihood.predict_mean_and_var(
-            *self.build_predict(X, full_cov=True)
-        )
+        mean, var = self.build_predict(X, full_cov=True)
+        var = var[:, :, 0] + tf.eye(tf.shape(var)[0], dtype=float_type)*self.likelihood.variance
 
         # Create omega
         omega = var[:, :, 0] + tf.matmul(mean, mean, transpose_b=True)
