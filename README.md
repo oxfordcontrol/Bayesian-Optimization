@@ -1,5 +1,5 @@
 # Bayesian-Optimization
-This is the implementation of a new acquisition function for **Batch Bayesian Optimization**, named **Optimistic Expected Improvement (OEI)**. For details, results and theoretical analysis, refer to the paper titled [*Distributionally Ambiguous Optimization Techniques in Batch Bayesian Optimization*](https://arxiv.org/abs/1707.04191) by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
+This is the implementation of a new acquisition function for **Batch Bayesian Optimization**, named **Optimistic Expected Improvement (OEI)**. For details, results and theoretical analysis, refer to the paper titled [*Distributionally Ambiguous Optimization Techniques for Batch Bayesian Optimization*](https://arxiv.org/abs/1707.04191) by Nikitas Rontsis, Michael A.  Osborne, Paul J. Goulart.
 
 This branch is a **cleaned** and **updated** implementation of `OEI`. The branch  [GPflow-based](https://github.com/oxfordcontrol/Bayesian-Optimization/tree/GPflow-based) includes code for testing against the following batch acquisition functions:
 * Multipoint expected improvement (`qei.py`)
