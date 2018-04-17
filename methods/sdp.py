@@ -15,7 +15,7 @@ def sdp(omega, fmin, warm_start=True):
     s.t.     M - C_i = positive semidefinite for all i = 0...k
     Dual Form:
     ---------Dual Form------------
-    minimize \sum_{i=1}^{k} <Y_i, C_i> - fmin
+    minimize \sum_{i=1}^{k} <Y_i, C_i>
     s.t.     Y_i positive semidefinite for all i = 0...k
                 \sum_{i=0}^{k} Y_i = \omega
     ------------------------------
@@ -37,11 +37,11 @@ def sdp(omega, fmin, warm_start=True):
     k_ = omega.shape[0]
     cone = {'s': [k_]*k_}
     if not 'past_omegas' in globals() or len(past_omegas) == 0 or \
-        past_omegas[0].shape[0] != k_ or warm_start == False:
+        past_omegas[0].shape[0] != k_:
         # Clear the saved solutions, as they are of different size
         # than the one we are currently trying to solve.
         reset_warm_starting()
-    else:
+    elif warm_start:
         # Update data with warm-started solution
         data = get_warm_start(omega, data)
 

@@ -29,9 +29,13 @@ class OEI(BO):
 
         X_, V = self.project(X)
         # Solve the SDP
-        value, M_, _, _ = sdp(self.omega(X_), fmin, warm_start=(len(X)==len(X_)))
-        M = V.T.dot(M_).dot(V)
-        _, gradient = self.acquisition_tf(X, M)
+        if len(X_) > 0:
+            value, M_, _, _ = sdp(self.omega(X_), fmin, warm_start=(len(X)==len(X_)))
+            _, gradient_ = self.acquisition_tf(X_, M_)
+            gradient = (V.T.dot(gradient_.reshape((-1, self.dim)))).flatten()
+        else:
+            value = 0; gradient = np.random.rand(len(x))
+
         return np.array([value]), gradient
 
     def acquisition_hessian(self, x):
@@ -157,7 +161,7 @@ class OEI(BO):
         the SDP problem becomes ill conditioned.
         
         In this cases, we get around this problem by solving a smaller (projected) SDP problem,
-        and providing a subgradient that causes the duplicates to separate and, if requested, a hessian equal to zero.
+        and providing a descent direction that causes the duplicates to separate and, if requested, a hessian equal to zero.
         Input: X: ndarray [batch_size x self.dim] containing the evaluation points
         Output: 
         If the self.likelihood.variance > 1e-4:
@@ -165,7 +169,7 @@ class OEI(BO):
         If the kernel is noiseless:
             X_u: ndarray [q x self.dim] containing the unique evaluation points (it removes also duplicates of dataset)
             V: ndarray [q x batch_size] projection matrix that given the solution M of the smaller sdp problem 
-                                        can be used to calculate an appropriate subgradient as V.T.dot(M).dot(V)
+                                        can be used to calculate an appropriate descent direction
         '''
         if self.likelihood.variance.value > 1e-4:
             return X, np.eye(X.shape[0] + 1)
@@ -179,17 +183,17 @@ class OEI(BO):
         # Remove duplicates of the dataset
         X_u = X[idx_]
         V = np.eye(X.shape[0])[idx_]
-        V[:, idx] = np.random.rand(V.shape[0], len(idx))
+        random_direction = np.random.rand(V.shape[0], len(idx))
+        V[:, idx] = random_direction/np.linalg.norm(random_direction, axis=0, keepdims=True)
 
-        # Remove duplicates in X
-        _, idx = np.unique(np.round(X / l, decimals=2), return_index=True, axis=0)
-        X_u = X_u[idx]
-        V = V[idx]
+        if X_u.shape[0] > 0:
+            _, idx = np.unique(np.round(X_u / l, decimals=2), return_index=True, axis=0)
+            X_u = X_u[idx]
+            V = V[idx]
 
-        V = la.block_diag(V, [[1]])
         # If no points were removed, then just return the original X, to preserve the order of its rows
         if len(X_u) == len(X):
             X_u = X
-            V = np.eye(X.shape[0] + 1)
+            V = np.eye(X.shape[0])
 
         return X_u, V
