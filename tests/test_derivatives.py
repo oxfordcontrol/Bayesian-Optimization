@@ -51,8 +51,7 @@ def sensitivity_numerical(omega, direction, model):
         M, Y = sdp(om, fmin)[1:3]
         solution = M.flatten()
         for i in range(len(Y)):
-            y = Y[i][0]/Y[i][0, 0]**.5
-            solution = np.concatenate((solution, y))
+            solution = np.concatenate((solution, Y[i].flatten()))
         return solution
 
     d_opt_val = nd.Derivative(
@@ -71,11 +70,11 @@ def sensitivity_analytical(omega, direction, model):
     _, M, Y, C = sdp(omega, fmin)
     d_opt_val = np.trace(M.T.dot(direction))
 
-    dM, dy = solution_derivative(M, Y, C, direction)
+    dM, dY = solution_derivative(M, Y, C, direction, return_dY=True)
 
     d_solution = dM.flatten()
-    for i in range(len(dy)):
-        d_solution = np.concatenate((d_solution, dy[i].flatten()))
+    for i in range(len(dY)):
+        d_solution = np.concatenate((d_solution, dY[i].flatten()))
 
     return d_opt_val, d_solution
 
