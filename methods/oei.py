@@ -27,16 +27,16 @@ class OEI(BO):
         fmin = np.min(self.predict_f(self.X.value)[0])
         X = x.reshape((-1, self.dim))
 
-        X_, V = self.project(X)
-        # Solve the SDP
+        X_, V = self.project(X)  # See comments in self.project
         if len(X_) > 0:
+            # Solve the SDP
             value, M_, _, _ = sdp(self.omega(X_), fmin, warm_start=(len(X)==len(X_)))
             _, gradient_ = self.acquisition_tf(X_, M_)
-            gradient = (V.T.dot(gradient_.reshape((-1, self.dim)))).flatten()
+            gradient = V.T.dot(gradient_)
         else:
             value = 0; gradient = np.random.rand(len(x))
 
-        return np.array([value]), gradient
+        return np.array([value]), gradient.flatten()
 
     def acquisition_hessian(self, x):
         '''
@@ -74,7 +74,7 @@ class OEI(BO):
         '''
         f = tf.tensordot(self.omega_tf(X), M, axes=2)
         df = tf.gradients(f, X)[0]
-        return tf.reshape(f, [-1]), tf.reshape(df, [-1])
+        return f, df
 
     def omega_tf(self, X):
         '''
@@ -156,7 +156,7 @@ class OEI(BO):
 
     def project(self, X):
         '''
-        According to Proposition 11, OEI and QEI are not differentiable when the kernel is noiseless and
+        According to Proposition 8, OEI and QEI are not differentiable when the kernel is noiseless and
         there are duplicates in X. In these cases calculating M, SDP's optimizer, becomes increasing hard, as
         the SDP problem becomes ill conditioned.
         
@@ -172,7 +172,7 @@ class OEI(BO):
                                         can be used to calculate an appropriate descent direction
         '''
         if self.likelihood.variance.value > 1e-4:
-            return X, np.eye(X.shape[0] + 1)
+            return X, np.eye(X.shape[0])
 
         l = self.kern.lengthscales.value
 
