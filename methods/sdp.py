@@ -4,6 +4,7 @@ import collections
 import logging
 import scipy.sparse as sp
 from pypardiso import spsolve, factorized
+import pypardiso
 
 OUTPUT_LEVEL = 0
 
@@ -31,6 +32,7 @@ def sdp(omega, fmin, warm_start=True):
         C: List of C_i, i = 0 ... k
     '''
     omega = (omega + omega.T)/2
+    assert not np.isnan(omega).any()
 
     # Express the problem in the format required by scs
     data = create_scs_data(omega, fmin)
@@ -97,16 +99,21 @@ def get_warm_start(omega, data):
     s = past_solutions[idx]['s'].copy()
 
     # Improve warm starting by moving the solution in the direction of dM, dy
-    domega = -(past_omegas[idx] - omega)
-    M, Y = unpack_solution(x, y, k_)
-    C = past_solutions[idx]['C']
-    dM, dY = solution_derivative(M, Y, C, domega, return_dY=True)
+    try:
+        domega = -(past_omegas[idx] - omega)
+        M, Y = unpack_solution(x, y, k_)
+        C = past_solutions[idx]['C']
+        dM, dY = solution_derivative(M, Y, C, domega, return_dY=True)
 
-    x += pack(dM[:,:,0], k_)
-    n = len(x)
-    for i in range(0, k_):
-        y[i*n:(i+1)*n] += pack(dY[i], k_)
-        s[i*n:(i+1)*n]-= pack(dM[:,:,0], k_)
+        x += pack(dM[:,:,0], k_)
+        n = len(x)
+        for i in range(0, k_):
+            y[i*n:(i+1)*n] += pack(dY[i], k_)
+            s[i*n:(i+1)*n]-= pack(dM[:,:,0], k_)
+    except pypardiso.pardiso_wrapper.PyPardisoError:
+        # In the (very) case where pardiso fails due to badly conditioned data
+        logging.getLogger('opt').warning('Call to pardiso failed. Switching to zero-order warm starting.')
+        pass
 
     # Add warm starting to the problem data
     data['x'] = x; data['y'] = y; data['s'] = s
