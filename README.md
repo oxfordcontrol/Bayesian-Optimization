@@ -64,9 +64,9 @@ The user can define a different function for optimization by modifying `benchmar
 ## Timing results
 The main operations for the calculating value of `OEI`, its gradient and hessian are listed below:
 * Value and gradient
-    * Solving the Semidefinite Optimization Problem [(relevant line)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/sdp.py#L49-L50).
+    * Solving the Semidefinite Optimization Problem [(relevant line)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/sdp.py#L51-L52).
 * Hessian (given solution of SDP): 
-    * Calculating the derivatives of M [(dominant operation)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/sdp.py#L177) called from [here](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L61).
+    * Calculating the derivatives of M [(dominant operation)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/sdp.py#L184) called from [here](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L61).
     * Chain rules of tensorflow [(relevant line #1](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L60), [relevant line #2)](https://github.com/oxfordcontrol/Bayesian-Optimization/blob/master/methods/oei.py#L64).
 
 In the current implementation a considerable amount of time is spent in Python to create, reshape and move matrices, all of which could have been avoided in a more efficient version.
