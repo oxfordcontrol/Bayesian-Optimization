@@ -18,23 +18,9 @@ algorithms = {
 
 class SafeMatern32(gpflow.kernels.Matern32):
     # See https://github.com/GPflow/GPflow/pull/727
-    def square_dist(self, X, X2):
-        X = X / self.lengthscales
-
-        if X2 is None:
-            X2 = X
-        else:
-            X2 = X2 / self.lengthscales
-
-        distances = tf.reduce_sum(tf.squared_difference(
-                tf.expand_dims(X, 1),
-                tf.expand_dims(X2, 0)),
-            2)
-        return distances
-
     def euclid_dist(self, X, X2):
         r2 = self.square_dist(X, X2)
-        return tf.sqrt(r2 + 1e-6)  # I find 1e-12 is too small
+        return tf.sqrt(tf.maximum(r2, 1e-40))
 
 
 def run(options, seed, robust=False, save=False):
