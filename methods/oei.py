@@ -171,8 +171,8 @@ class OEI(BO):
             V: ndarray [q x batch_size] projection matrix that given the solution M of the smaller sdp problem 
                                         can be used to calculate an appropriate descent direction
         '''
-        if self.likelihood.variance.value > 1e-4:
-            return X, np.eye(X.shape[0])
+        # if self.likelihood.variance.value > 1e-4:
+        return X, np.eye(X.shape[0])
 
         l = self.kern.lengthscales.value
 

@@ -113,3 +113,30 @@ class hart6:
 
         return (y + noise).reshape((n, 1))
 
+class eggholder:
+    def __init__(self,bounds=None,sd=None):
+        self.input_dim = 2
+        if bounds is  None: self.bounds = [(-512,512),(-512,512)]
+        else: self.bounds = bounds
+        self.min = [(512,404.2319)]
+        self.fmin = -959.6407
+        if sd==None: self.sd = 0
+        else: self.sd=sd
+        self.name = 'Egg-holder'
+
+    def f(self,X):
+        if len(X.shape) == 1:
+            X = X.reshape((1, 2))
+        n = X.shape[0]
+
+        if X.shape[1] != self.input_dim:
+            return 'Wrong input dimension'
+        else:
+            x1 = X[:,0]
+            x2 = X[:,1]
+            fval = -(x2+47) * np.sin(np.sqrt(abs(x2+x1/2+47))) + -x1 * np.sin(np.sqrt(abs(x1-(x2+47))))
+            if self.sd ==0:
+                noise = np.zeros(n).reshape(n,1)
+            else:
+                noise = np.random.normal(0,self.sd,n).reshape(n,1)
+            return fval.reshape(n,1) + noise

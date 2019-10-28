@@ -3,12 +3,8 @@ import scs
 import collections
 import logging
 import scipy.sparse as sp
-import julia
-import sys
 # from pypardiso import spsolve, factorized
 # import pypardiso
-j = julia.Julia()
-cosmo_solver = j.include('solver.jl')
 
 OUTPUT_LEVEL = 1
 
@@ -36,18 +32,9 @@ def sdp(omega, fmin, warm_start=True):
         C: List of C_i, i = 0 ... k
     '''
     omega = (omega + omega.T)/2
-    '''
-    print(np.linalg.eigvals(omega))
-    sigma = omega[0:-1, 0:-1]
-    mu = omega[0:-1, -2:-1]
-    sigma = sigma - mu@mu.T
-    print(np.linalg.eigvals(sigma))
-    '''
     assert not np.isnan(omega).any()
+
     # Express the problem in the format required by scs
-    
-    objective, M = cosmo_solver(omega, fmin)
-    '''
     data = create_scs_data(omega, fmin)
     k_ = omega.shape[0]
     cone = {'s': [k_]*k_}
@@ -67,14 +54,17 @@ def sdp(omega, fmin, warm_start=True):
         logging.getLogger('opt').warning(
             'SCS solution status:' + sol['info']['status']
         )
-    M_, Y_ = unpack_solution(sol['x'], sol['y'], k_)
-    
-    sys.stdout.flush()
-    print(np.linalg.norm(M - M_, 'fro'))
-    '''
-    # print(-sol['info']['pobj'])
-    # import pdb; pdb.set_trace()
-    return objective, M, 0, 0
+
+    # Extract solution from SCS' structures
+    M, Y = unpack_solution(sol['x'], sol['y'], k_)
+    objective = -sol['info']['pobj']
+    sol['C'] = data['C']
+
+    if warm_start:
+        # Save solution for warm starting
+        past_solutions.append(sol); past_omegas.append(omega)
+
+    return objective, M, Y, data['C']
 
 def reset_warm_starting():
     '''
@@ -269,8 +259,8 @@ def pack(Z, n):
     tidx = (tidx[1], tidx[0])
     didx = np.diag_indices(n)
 
-    Z = Z * np.sqrt(2.)
-    Z[didx] = Z[didx] / np.sqrt(2.)
+    Z = Z * np.sqrt(1.)
+    Z[didx] = Z[didx] / np.sqrt(1.)
     z = Z[tidx]
 
     return z
@@ -287,8 +277,8 @@ def unpack(z, n):
 
     Z = np.zeros((n, n))
     Z[tidx] = z
-    Z = (Z + np.transpose(Z)) / np.sqrt(2.)
-    Z[didx] = Z[didx] / np.sqrt(2.)
+    Z = (Z + np.transpose(Z)) / np.sqrt(1.)
+    Z[didx] = Z[didx] / np.sqrt(1.)
 
     return Z
 

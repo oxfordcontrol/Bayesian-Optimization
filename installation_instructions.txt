@@ -1,0 +1,7 @@
+conda create -n bopt_new pip
+source activate bopt_new
+conda install numpy scipy matplotlib pyyaml
+pip install tensorflow==1.13.1
+pip install git+git://github.com/GPflow/GPflow.git@0.5.0
+# Remeber to add gpflowrc on ~
+pip install 'scs>=2.0.2' --no-binary :all:

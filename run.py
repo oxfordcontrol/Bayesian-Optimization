@@ -8,7 +8,7 @@ from methods.oei import OEI
 from methods.random import Random
 import time
 import pickle
-from benchmark_functions import scale_function, hart6
+from benchmark_functions import scale_function, hart6, eggholder
 import copy
 
 algorithms = {
@@ -73,7 +73,8 @@ def run(options, seed, robust=False, save=False):
 
 def create_options(args):
     functions = {
-        'hart6': hart6()
+        'hart6': hart6(),
+        'eggholder': eggholder()
     }
 
     kernels_gpflow = {

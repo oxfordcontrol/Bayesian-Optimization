@@ -21,3 +21,5 @@ get_results.sh
 **/output*
 log**/
 evals**/
+.vscode/**
+out*.txt

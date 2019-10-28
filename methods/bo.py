@@ -10,7 +10,7 @@ import shutil
 import os
 import re
 import yaml
-
+import traceback
 
 class BO(GPR):
     '''
@@ -197,6 +197,7 @@ class BO(GPR):
         random restarts on the maximization of the likelihood 
         of the GP's hyperparameters.
         '''
+        self.compile()
         if self._needs_recompile:
             self.compile()
         obj = self._objective
@@ -212,6 +213,8 @@ class BO(GPR):
             except KeyboardInterrupt:
                 raise
             except:
+                print("Hyperparameter optimization #" + str(i) + " failed!")# + traceback.print_exception(e))
+                traceback.print_exc()
                 val = float("inf")
 
             if val < val_min:
