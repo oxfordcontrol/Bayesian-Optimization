@@ -1,11 +1,14 @@
 using JuMP, SCS #, MosekTools
 using LinearAlgebra, SparseArrays
-include("/Users/nrontsis/OneDrive - The University of Oxford/PhD/Code/COSMO_original/src/COSMO.jl")
+include("../ApproximateCOSMO.jl/src/COSMO.jl")
 using Main.COSMO
 # using COSMO
 using MathOptInterface
 using Statistics
 using DataStructures
+using DataFrames, CSV
+
+df = DataFrame(Iterations = Int[], TotalTime = Float64[], ProjectionTime = Float64[], LinearSolveTime = Float64[])
 
 function populate_upper_triangle(x)
 	n = Int(1/2*(sqrt(8*length(x) + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
@@ -81,13 +84,15 @@ function modify_primal_problem!(model, omega, ymin)
         model.p.b[idx] = -ymin
     end
     counter = 1
+    # @show model.p.q
+    # show(stdout, "text/plain", omega); println()
     for j in 1:k, i in 1:k
         if j == i
             # @assert model.p.q[counter] == omega[i, j]
             model.p.q[counter] = omega[i, j]
             counter += 1
-        elseif j < i
-            # @assert model.p.q[counter] == 2*omega[i, j]
+        elseif j > i
+            # @assert model.p.q[counter] == 2*omega[i, j] (model.p.q[counter], omega[i, j])
             model.p.q[counter] = 2*omega[i, j]
             counter += 1
         end
@@ -106,7 +111,7 @@ function modify_dual_problem!(model, omega, ymin)
     # @show model.p.b
     for j in 1:k, i in 1:k
         if j == i
-            #@assert model.p.b[counter] == omega[i, j]
+            # @assert model.p.b[counter] == omega[i, j]
             model.p.b[counter] = omega[i, j]
             counter += 1
         elseif j < i
@@ -118,7 +123,7 @@ function modify_dual_problem!(model, omega, ymin)
     return model
 end 
 
-function solve_primal_wrapper(omega, ymin, lanczos=true)
+function solve_primal_wrapper(omega, ymin, psd_projector=COSMO.PsdConeTriangleLOBPCG)
     k = size(omega, 1)
     if !isempty(omegas)
         min_value = Inf
@@ -133,7 +138,7 @@ function solve_primal_wrapper(omega, ymin, lanczos=true)
         modify_primal_problem!(model, omega, ymin)
     else
         model = solve_primal_jump(omega, ymin, COSMO.Optimizer, verbose=true,
-            check_termination=40, scaling=0, lanczos=lanczos, max_iter=10000, eps_abs = 1e-4, eps_rel = 1e-4
+            check_termination=40, scaling=0, psd_projector=psd_projector, max_iter=10000, eps_abs = 1e-4, eps_rel = 1e-4
         ).moi_backend.optimizer.model.optimizer.inner
     end
     @show model.times
@@ -141,11 +146,14 @@ function solve_primal_wrapper(omega, ymin, lanczos=true)
     push!(omegas, omega)
     push!(models, model)
 
+    push!(df, [model.iterations, model.times.solver_time, model.times.proj_time, model.times.sol_time])
+    df |> CSV.write(string("timings.csv"))
+
     M = populate_upper_triangle(model.vars.x)
     return dot(M, omega), M
 end
 
-function solve_dual_wrapper(omega, ymin, lanczos=true)
+function solve_dual_wrapper(omega, ymin, psd_projector=COSMO.PsdConeTriangleLOBPCG)
     k = size(omega, 1)
     if !isempty(omegas)
         min_value = Inf
@@ -160,7 +168,7 @@ function solve_dual_wrapper(omega, ymin, lanczos=true)
         modify_dual_problem!(model, omega, ymin)
     else
         model = solve_dual_jump(omega, ymin, COSMO.Optimizer, verbose=true,
-            check_termination=40, scaling=0, lanczos=lanczos, max_iter=10000, eps_abs = 1e-4, eps_rel = 1e-4,
+            check_termination=40, scaling=0, psd_projector=psd_projector, max_iter=10000, eps_abs = 1e-4, eps_rel = 1e-4,
             adaptive_rho=true,
         ).moi_backend.optimizer.model.optimizer.inner
     end
@@ -169,13 +177,16 @@ function solve_dual_wrapper(omega, ymin, lanczos=true)
     push!(omegas, omega)
     push!(models, model)
 
+    push!(df, [model.iterations, model.times.solver_time, model.times.proj_time, model.times.sol_time])
+    df |> CSV.write(string("timings.csv"))
+
     M = populate_upper_triangle(model.vars.μ[1:Int(k*(k + 1)/2)])
     return dot(M, omega), M
 end
 
-solve_primal_wrapper
+(omega, ymin) -> solve_dual_wrapper(omega, ymin, COSMO.PsdConeTriangleLOBPCG)
 #=
-k = 200
+k = 5
 S = Symmetric(randn(k - 1, k - 1));
 S += -minimum(eigvals(S))*I;
 @show eigvals(S);
@@ -183,8 +194,9 @@ S = 0*S + I
 mu = randn(k - 1, 1);
 mu ./= mean(mu)
 omega = [S + mu*mu' mu; mu' 1.0]
-opt_val, M = solve_dual_wrapper(omega, 1.0, true)
+opt_val, M = solve_primal_wrapper(omega, 1.0)
+opt_val, M = solve_primal_wrapper(omega, 1.0)
 omegas = CircularBuffer{Matrix{Float64}}(5)
 models = CircularBuffer{Main.COSMO.Workspace{Float64}}(5)
-opt_val, M = solve_dual_wrapper(omega, 1.0, false)
+opt_val, M = solve_primal_wrapper(omega, 1.0, COSMO.PsdConeTriangle)
 =#
