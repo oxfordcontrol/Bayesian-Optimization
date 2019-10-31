@@ -147,7 +147,8 @@ function solve_primal_wrapper(omega, ymin, psd_projector=COSMO.PsdConeTriangleLO
     push!(models, model)
 
     push!(df, [model.iterations, model.times.solver_time, model.times.proj_time, model.times.sol_time])
-    df |> CSV.write(string("timings.csv"))
+    lobpcg_string = psd_projector == COSMO.PsdConeTriangleLOBPCG ? "lobpcg" : "exact"
+    df |> CSV.write(string("timings_primal_", k - 1, "_", lobpcg_string, ".csv"))
 
     M = populate_upper_triangle(model.vars.x)
     return dot(M, omega), M
@@ -178,7 +179,8 @@ function solve_dual_wrapper(omega, ymin, psd_projector=COSMO.PsdConeTriangleLOBP
     push!(models, model)
 
     push!(df, [model.iterations, model.times.solver_time, model.times.proj_time, model.times.sol_time])
-    df |> CSV.write(string("timings.csv"))
+    lobpcg_string = psd_projector == COSMO.PsdConeTriangleLOBPCG ? "lobpcg" : "exact"
+    df |> CSV.write(string("timings_", k - 1, "_", lobpcg_string, ".csv"))
 
     M = populate_upper_triangle(model.vars.μ[1:Int(k*(k + 1)/2)])
     return dot(M, omega), M

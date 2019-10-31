@@ -1,7 +1,17 @@
-conda create -n bopt_new pip
-source activate bopt_new
+conda create -n FastBO pip
+conda activate FastBO
 conda install numpy scipy matplotlib pyyaml
 pip install tensorflow==1.13.1
 pip install git+git://github.com/GPflow/GPflow.git@0.5.0
 # Remeber to add gpflowrc on ~
 pip install 'scs>=2.0.2' --no-binary :all:
+
+# To connect python with Julia install the following
+pip install julia
+# in julia
+ENV["PYTHON"] = "path-to-your-anaconda-environment/bin/python"
+using Pkg
+Pkg.add("PyCall")
+Pkg.build("PyCall")
+# Then you can run the main script as
+./run_me.sh
