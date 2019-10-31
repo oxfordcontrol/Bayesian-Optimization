@@ -1,14 +1,12 @@
+from .config import cosmo_solver
 import numpy as np
 import scs
 import collections
 import logging
 import scipy.sparse as sp
-import julia
 import sys
 # from pypardiso import spsolve, factorized
 # import pypardiso
-j = julia.Julia()
-cosmo_solver = j.include('solver.jl')
 
 OUTPUT_LEVEL = 1
 
